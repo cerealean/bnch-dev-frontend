@@ -91,11 +91,23 @@ return sum;`);
 
   protected readonly statsComparisonOptions: ChartConfiguration<'doughnut'>['options'] = {
     responsive: true,
+    maintainAspectRatio: true,
+    aspectRatio: 1,
     plugins: {
       title: {
         display: true,
-        text: 'Statistical Breakdown'
+        text: 'Performance Reliability'
+      },
+      legend: {
+        position: 'bottom',
+        labels: {
+          padding: 15,
+          usePointStyle: true
+        }
       }
+    },
+    layout: {
+      padding: 10
     }
   };
 
@@ -217,38 +229,93 @@ return sum;`);
   private generateStatsComparisonData(result: BenchmarkResult): void {
     const stats = result.stats;
     
-    // Create a visual comparison of key statistics
-    const data = [
-      stats.min,
-      stats.median - stats.min,
-      stats.mean - stats.median,
-      stats.max - stats.mean
-    ];
+    // Show meaningful performance insights: Consistency vs Outliers
+    const executionTimes = result.samples
+      .filter(sample => sample.success)
+      .map(sample => sample.time);
+    
+    if (executionTimes.length === 0) {
+      // If no successful samples, show just failures
+      this.statsComparisonData.set({
+        labels: ['Failed Executions'],
+        datasets: [{
+          data: [stats.failedSamples],
+          backgroundColor: ['rgba(244, 67, 54, 0.8)'],
+          borderColor: ['rgba(244, 67, 54, 1)'],
+          borderWidth: 2
+        }]
+      });
+      return;
+    }
 
-    const labels = [
-      `Min: ${this.formatTime(stats.min)}`,
-      `Min to Median: ${this.formatTime(stats.median - stats.min)}`,
-      `Median to Mean: ${this.formatTime(stats.mean - stats.median)}`,
-      `Mean to Max: ${this.formatTime(stats.max - stats.mean)}`
-    ];
-
+    const mean = stats.mean;
+    const stdDev = stats.standardDeviation;
+    
+    // Categorize samples by how far they deviate from the mean
+    // This shows code reliability and predictability
+    const veryConsistent = executionTimes.filter(time => 
+      Math.abs(time - mean) <= stdDev * 0.5
+    ).length;
+    
+    const consistent = executionTimes.filter(time => 
+      Math.abs(time - mean) > stdDev * 0.5 && Math.abs(time - mean) <= stdDev
+    ).length;
+    
+    const outliers = executionTimes.filter(time => 
+      Math.abs(time - mean) > stdDev
+    ).length;
+    
+    // Add failed samples if any
+    const failed = stats.failedSamples;
+    
+    const data = [];
+    const labels = [];
+    const colors = [];
+    const borderColors = [];
+    
+    if (veryConsistent > 0) {
+      data.push(veryConsistent);
+      labels.push(`Highly Consistent (${((veryConsistent / result.samples.length) * 100).toFixed(0)}%)`);
+      colors.push('rgba(76, 175, 80, 0.8)');  // Green
+      borderColors.push('rgba(76, 175, 80, 1)');
+    }
+    
+    if (consistent > 0) {
+      data.push(consistent);
+      labels.push(`Moderately Consistent (${((consistent / result.samples.length) * 100).toFixed(0)}%)`);
+      colors.push('rgba(255, 193, 7, 0.8)');  // Amber
+      borderColors.push('rgba(255, 193, 7, 1)');
+    }
+    
+    if (outliers > 0) {
+      data.push(outliers);
+      labels.push(`Performance Outliers (${((outliers / result.samples.length) * 100).toFixed(0)}%)`);
+      colors.push('rgba(255, 152, 0, 0.8)');  // Orange
+      borderColors.push('rgba(255, 152, 0, 1)');
+    }
+    
+    if (failed > 0) {
+      data.push(failed);
+      labels.push(`Failed Executions (${((failed / result.samples.length) * 100).toFixed(0)}%)`);
+      colors.push('rgba(244, 67, 54, 0.8)');  // Red
+      borderColors.push('rgba(244, 67, 54, 1)');
+    }
+    
+    // Ensure we have at least some data
+    if (data.length === 0) {
+      data.push(1);
+      labels.push('No Data Available');
+      colors.push('rgba(158, 158, 158, 0.8)');
+      borderColors.push('rgba(158, 158, 158, 1)');
+    }
+    
     this.statsComparisonData.set({
       labels,
       datasets: [{
         data,
-        backgroundColor: [
-          'rgba(255, 99, 132, 0.7)',
-          'rgba(54, 162, 235, 0.7)',
-          'rgba(255, 205, 86, 0.7)',
-          'rgba(75, 192, 192, 0.7)'
-        ],
-        borderColor: [
-          'rgba(255, 99, 132, 1)',
-          'rgba(54, 162, 235, 1)',
-          'rgba(255, 205, 86, 1)',
-          'rgba(75, 192, 192, 1)'
-        ],
-        borderWidth: 1
+        backgroundColor: colors,
+        borderColor: borderColors,
+        borderWidth: 2
       }]
     });
   }
