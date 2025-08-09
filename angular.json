@@ -28,6 +28,11 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "worker-script.js",
+                "input": "node_modules/@bnch/benchmarker/dist",
+                "output": "/"
               }
             ],
             "styles": [

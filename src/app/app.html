@@ -1,0 +1,103 @@
+<div class="container">
+  <header class="header">
+    <h1>JavaScript Performance Benchmarker</h1>
+    <p class="description">
+      This tool allows you to benchmark JavaScript code performance with statistical precision. 
+      Simply enter your JavaScript code in the textarea below and click "Run Benchmark" to get 
+      detailed performance metrics including execution time, operations per second, and statistical analysis.
+      The code will be executed safely in an isolated environment to ensure accurate measurements.
+    </p>
+  </header>
+
+  <main class="main-content">
+    <div class="input-section">
+      <textarea 
+        [(ngModel)]="code" 
+        placeholder="Enter your JavaScript code here to benchmark its performance..."
+        class="code-input"
+         id="main-benchmark-input" 
+         name="main-benchmark-input"
+        [disabled]="isRunning()"
+        rows="20"
+      ></textarea>
+      
+      <button 
+        (click)="runBenchmark()" 
+        [disabled]="isRunning() || !code().trim()"
+        class="submit-button"
+      >
+        @if (isRunning()) {
+          <span class="spinner"></span>
+          Running Benchmark...
+        } @else {
+          Run Benchmark
+        }
+      </button>
+    </div>
+
+    @if (error()) {
+      <div class="error-section">
+        <h3>Error</h3>
+        <p class="error-message">{{ error() }}</p>
+      </div>
+    }
+
+    @if (result()) {
+      <div class="results-section">
+        <h2>Benchmark Results</h2>
+        
+        <div class="results-grid">
+          <div class="result-item">
+            <h3>Mean Execution Time</h3>
+            <p class="metric">{{ formatTime(result()!.stats.mean) }}</p>
+          </div>
+          
+          <div class="result-item">
+            <h3>Operations per Second</h3>
+            <p class="metric highlight">{{ formatNumber(result()!.stats.operationsPerSecond, 0) }} ops/sec</p>
+          </div>
+          
+          <div class="result-item">
+            <h3>Samples Collected</h3>
+            <p class="metric">{{ result()!.stats.successfulSamples }} / {{ result()!.samples.length }}</p>
+          </div>
+          
+          <div class="result-item">
+            <h3>Total Time</h3>
+            <p class="metric">{{ formatTime(result()!.totalTime) }}</p>
+          </div>
+        </div>
+
+        <div class="detailed-stats">
+          <h3>Detailed Statistics</h3>
+          <div class="stats-table">
+            <div class="stat-row">
+              <span>Median:</span>
+              <span>{{ formatTime(result()!.stats.median) }}</span>
+            </div>
+            <div class="stat-row">
+              <span>Minimum:</span>
+              <span>{{ formatTime(result()!.stats.min) }}</span>
+            </div>
+            <div class="stat-row">
+              <span>Maximum:</span>
+              <span>{{ formatTime(result()!.stats.max) }}</span>
+            </div>
+            <div class="stat-row">
+              <span>Standard Deviation:</span>
+              <span>{{ formatTime(result()!.stats.standardDeviation) }}</span>
+            </div>
+            <div class="stat-row">
+              <span>Coefficient of Variation:</span>
+              <span>{{ formatNumber(result()!.stats.coefficientOfVariation * 100, 2) }}%</span>
+            </div>
+            <div class="stat-row">
+              <span>Failed Samples:</span>
+              <span>{{ result()!.stats.failedSamples }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </main>
+</div>
