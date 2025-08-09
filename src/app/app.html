@@ -53,7 +53,9 @@
               <div class="results-grid">
                 <div class="result-item">
                   <h3>Mean Execution Time</h3>
-                  <p class="metric">{{ formatTime(result()!.stats.mean) }}</p>
+                  <p class="metric">
+                    <app-time-format [timeMs]="result()!.stats.mean"></app-time-format>
+                  </p>
                 </div>
                 
                 <div class="result-item">
@@ -68,7 +70,9 @@
                 
                 <div class="result-item">
                   <h3>Total Time</h3>
-                  <p class="metric">{{ formatTime(result()!.totalTime) }}</p>
+                  <p class="metric">
+                    <app-time-format [timeMs]="result()!.totalTime"></app-time-format>
+                  </p>
                 </div>
               </div>
             </div>
@@ -82,19 +86,27 @@
                 <div class="stats-table">
                   <div class="stat-row">
                     <span>Median:</span>
-                    <span>{{ formatTime(result()!.stats.median) }}</span>
+                    <span>
+                      <app-time-format [timeMs]="result()!.stats.median"></app-time-format>
+                    </span>
                   </div>
                   <div class="stat-row">
                     <span>Minimum:</span>
-                    <span>{{ formatTime(result()!.stats.min) }}</span>
+                    <span>
+                      <app-time-format [timeMs]="result()!.stats.min"></app-time-format>
+                    </span>
                   </div>
                   <div class="stat-row">
                     <span>Maximum:</span>
-                    <span>{{ formatTime(result()!.stats.max) }}</span>
+                    <span>
+                      <app-time-format [timeMs]="result()!.stats.max"></app-time-format>
+                    </span>
                   </div>
                   <div class="stat-row">
                     <span>Standard Deviation:</span>
-                    <span>{{ formatTime(result()!.stats.standardDeviation) }}</span>
+                    <span>
+                      <app-time-format [timeMs]="result()!.stats.standardDeviation"></app-time-format>
+                    </span>
                   </div>
                   <div class="stat-row">
                     <span>Coefficient of Variation:</span>

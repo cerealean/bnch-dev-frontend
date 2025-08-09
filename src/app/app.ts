@@ -5,6 +5,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { BaseChartDirective } from 'ng2-charts';
 import { Chart, ChartConfiguration, ChartData, ChartType, registerables } from 'chart.js';
 import { benchmark, BenchmarkResult } from './benchmarker-wrapper';
+import { TimeFormatComponent } from './time-format/time-format.component';
 
 // Register Chart.js components
 Chart.register(...registerables);
@@ -15,7 +16,8 @@ Chart.register(...registerables);
     CommonModule,
     FormsModule,
     BaseChartDirective,
-    MatTabsModule
+    MatTabsModule,
+    TimeFormatComponent
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss'
@@ -149,50 +151,6 @@ return sum;`);
       return num.toExponential(2);
     }
     return num.toFixed(decimals);
-  }
-
-  protected formatTime(timeMs: number): string {
-    // Handle null/undefined/NaN
-    if (timeMs === null || timeMs === undefined || isNaN(timeMs)) {
-      return "N/A";
-    }
-    
-    // Handle true zero
-    if (timeMs === 0) {
-      return "0.000ns";
-    }
-    
-    // For extremely tiny values, use attoseconds (< 0.000000001ms = 1ps)
-    if (timeMs < 0.000000001) {
-      const attoseconds = timeMs * 1000000000000000;
-      return `${this.formatNumber(attoseconds, 3)}as`;
-    }
-    
-    // For super small values, use femtoseconds (< 0.000001ms = 1ns)
-    if (timeMs < 0.000001) {
-      const femtoseconds = timeMs * 1000000000000;
-      return `${this.formatNumber(femtoseconds, 3)}fs`;
-    }
-    
-    // For extremely small values, use picoseconds (< 0.001ms = 1µs)
-    if (timeMs < 0.001) {
-      const picoseconds = timeMs * 1000000000;
-      return `${this.formatNumber(picoseconds, 3)}ps`;
-    }
-    
-    // For very small values, use nanoseconds (< 1ms)
-    if (timeMs < 1) {
-      const nanoseconds = timeMs * 1000000;
-      return `${this.formatNumber(nanoseconds, 3)}ns`;
-    }
-    
-    // For normal values, use milliseconds (< 1000ms)
-    if (timeMs < 1000) {
-      return `${this.formatNumber(timeMs, 3)}ms`;
-    }
-    
-    // For large values, use seconds
-    return `${this.formatNumber(timeMs / 1000, 3)}s`;
   }
 
   private generateChartData(result: BenchmarkResult): void {
