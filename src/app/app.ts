@@ -3,10 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
 import { BaseChartDirective } from 'ng2-charts';
-import { Chart, ChartConfiguration, ChartData, ChartType, registerables } from 'chart.js';
+import { Chart, ChartConfiguration, ChartData, registerables } from 'chart.js';
 import { benchmark, BenchmarkResult } from './benchmarker-wrapper';
 import { TimeFormatComponent } from './time-format/time-format.component';
-
+import { TimeDuration } from '@bnch/benchmarker'
 // Register Chart.js components
 Chart.register(...registerables);
 
@@ -129,7 +129,7 @@ return sum;`);
       const benchmarkResult = await benchmark(codeValue, {
         minSamples: 10,
         maxSamples: 100,
-        maxTime: 10000, // 10 seconds max
+        maxTime: TimeDuration.fromSeconds(10),
         warmupIterations: 5,
         yieldBetweenSamples: true,
         useWorker: true // Re-enabled worker with our wrapper fix!
@@ -213,7 +213,7 @@ return sum;`);
         tension: 0.1
       }, {
         label: 'Mean',
-        data: Array(executionTimes.length).fill(result.stats.mean),
+        data: Array(executionTimes.length).fill(result.stats.mean.milliseconds),
         borderColor: 'rgba(255, 99, 132, 1)',
         backgroundColor: 'rgba(255, 99, 132, 0.2)',
         borderDash: [5, 5],
@@ -244,9 +244,9 @@ return sum;`);
       return;
     }
 
-    const mean = stats.mean;
-    const stdDev = stats.standardDeviation;
-    
+    const mean = stats.mean.milliseconds;
+    const stdDev = stats.standardDeviation.milliseconds;
+
     // Categorize samples by how far they deviate from the mean
     // This shows code reliability and predictability
     const veryConsistent = executionTimes.filter(time => 

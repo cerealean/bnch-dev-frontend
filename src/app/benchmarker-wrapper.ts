@@ -1,4 +1,4 @@
-import { benchmark as originalBenchmark, BenchmarkConfig, BenchmarkResult } from '@bnch/benchmarker';
+import { benchmark as originalBenchmark, BenchmarkConfig, BenchmarkResult, TimeDuration } from '@bnch/benchmarker';
 
 /**
  * Wrapper around the @bnch/benchmarker library that fixes worker script loading
@@ -41,3 +41,4 @@ export async function benchmark(code: string, options: Partial<BenchmarkConfig> 
 
 // Re-export types for convenience
 export type { BenchmarkConfig, BenchmarkResult } from '@bnch/benchmarker';
+export { TimeDuration } from '@bnch/benchmarker';

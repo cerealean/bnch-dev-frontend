@@ -5,6 +5,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
+import { TimeDuration } from '../benchmarker-wrapper';
 
 interface TimeFormat {
   value: string;
@@ -148,7 +149,7 @@ interface TimeUnit {
   `]
 })
 export class TimeFormatComponent {
-  @Input({ required: true }) timeMs!: number;
+  @Input({ required: true }) timeMs!: number | TimeDuration;
 
   protected readonly selectedUnit = signal<string>('auto');
 
@@ -161,8 +162,36 @@ export class TimeFormatComponent {
     { key: 'fs', name: 'Femtoseconds', symbol: 'fs', multiplier: 1000000000000, description: 'Theoretical precision' }
   ];
 
+  // Helper method to convert TimeDuration to milliseconds
+  private getTimeInMs(): number {
+    if (typeof this.timeMs === 'number') {
+      return this.timeMs;
+    }
+    
+    // Handle TimeDuration objects or plain objects with TimeDuration structure
+    const timeObj = this.timeMs as any;
+    
+    // Try to get milliseconds in different ways
+    if (timeObj && typeof timeObj.milliseconds === 'number') {
+      return timeObj.milliseconds;
+    }
+    
+    // If it's a plain object that was serialized, it might have _nanoseconds
+    if (timeObj && typeof timeObj._nanoseconds === 'number') {
+      return timeObj._nanoseconds / 1_000_000; // Convert nanoseconds to milliseconds
+    }
+    
+    // If it has nanoseconds property
+    if (timeObj && typeof timeObj.nanoseconds === 'number') {
+      return timeObj.nanoseconds / 1_000_000;
+    }
+    
+    console.warn('Could not extract time value from:', timeObj);
+    return 0;
+  }
+
   protected readonly availableUnits = computed(() => {
-    const timeMs = this.timeMs;
+    const timeMs = this.getTimeInMs();
     
     // Only show units that would result in reasonable values (> 0.001 and < 10000)
     return this.timeUnits.filter(unit => {
@@ -172,7 +201,7 @@ export class TimeFormatComponent {
   });
 
   protected formattedTime = computed((): TimeFormat => {
-    const timeMs = this.timeMs;
+    const timeMs = this.getTimeInMs();
     const selectedUnit = this.selectedUnit();
     
     // Handle null/undefined/NaN
@@ -284,7 +313,7 @@ export class TimeFormatComponent {
   }
 
   protected formatInUnit(unit: TimeUnit): string {
-    const timeMs = this.timeMs;
+    const timeMs = this.getTimeInMs();
     
     if (timeMs === null || timeMs === undefined || isNaN(timeMs) || timeMs === 0) {
       return 'N/A';
