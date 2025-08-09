@@ -1,4 +1,4 @@
-import { Component, Input, computed, signal } from '@angular/core';
+import { Component, Input, computed, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
@@ -149,7 +149,11 @@ interface TimeUnit {
   `]
 })
 export class TimeFormatComponent {
-  @Input({ required: true }) timeMs!: number | TimeDuration;
+//   @Input({ required: true }) timeMs!: number | TimeDuration;
+  
+  readonly duration = input.required<TimeDuration>();
+  readonly timeMs = computed(() => this.duration().milliseconds);
+  readonly display = computed(() => this.duration().toString());
 
   protected readonly selectedUnit = signal<string>('auto');
 
@@ -163,35 +167,31 @@ export class TimeFormatComponent {
   ];
 
   // Helper method to convert TimeDuration to milliseconds
-  private getTimeInMs(): number {
-    if (typeof this.timeMs === 'number') {
-      return this.timeMs;
-    }
+//   private getTimeInMs(): number {    
+//     // Handle TimeDuration objects or plain objects with TimeDuration structure
+//     const timeObj = this.duration();
     
-    // Handle TimeDuration objects or plain objects with TimeDuration structure
-    const timeObj = this.timeMs as any;
+//     // Try to get milliseconds in different ways
+//     if (timeObj && typeof timeObj.milliseconds === 'number') {
+//       return timeObj.milliseconds;
+//     }
     
-    // Try to get milliseconds in different ways
-    if (timeObj && typeof timeObj.milliseconds === 'number') {
-      return timeObj.milliseconds;
-    }
+//     // If it's a plain object that was serialized, it might have _nanoseconds
+//     if (timeObj && typeof (timeObj as any)._nanoseconds === 'number') {
+//       return (timeObj as any)._nanoseconds / 1_000_000; // Convert nanoseconds to milliseconds
+//     }
     
-    // If it's a plain object that was serialized, it might have _nanoseconds
-    if (timeObj && typeof timeObj._nanoseconds === 'number') {
-      return timeObj._nanoseconds / 1_000_000; // Convert nanoseconds to milliseconds
-    }
+//     // If it has nanoseconds property
+//     if (timeObj && typeof timeObj.nanoseconds === 'number') {
+//       return timeObj.nanoseconds / 1_000_000;
+//     }
     
-    // If it has nanoseconds property
-    if (timeObj && typeof timeObj.nanoseconds === 'number') {
-      return timeObj.nanoseconds / 1_000_000;
-    }
-    
-    console.warn('Could not extract time value from:', timeObj);
-    return 0;
-  }
+//     console.warn('Could not extract time value from:', timeObj);
+//     return 0;
+//   }
 
   protected readonly availableUnits = computed(() => {
-    const timeMs = this.getTimeInMs();
+    const timeMs = this.timeMs();
     
     // Only show units that would result in reasonable values (> 0.001 and < 10000)
     return this.timeUnits.filter(unit => {
@@ -201,7 +201,7 @@ export class TimeFormatComponent {
   });
 
   protected formattedTime = computed((): TimeFormat => {
-    const timeMs = this.getTimeInMs();
+    const timeMs = this.timeMs();
     const selectedUnit = this.selectedUnit();
     
     // Handle null/undefined/NaN
@@ -313,8 +313,8 @@ export class TimeFormatComponent {
   }
 
   protected formatInUnit(unit: TimeUnit): string {
-    const timeMs = this.getTimeInMs();
-    
+    const timeMs = this.timeMs();
+
     if (timeMs === null || timeMs === undefined || isNaN(timeMs) || timeMs === 0) {
       return 'N/A';
     }

@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -33,6 +33,7 @@ return sum;`);
   
   protected readonly isRunning = signal<boolean>(false);
   protected readonly result = signal<BenchmarkResult | null>(null);
+  protected readonly resultStats = computed(() => this.result()?.stats);
   protected readonly error = signal<string | null>(null);
 
   // Chart data and configuration

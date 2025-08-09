@@ -54,24 +54,24 @@
                 <div class="result-item">
                   <h3>Mean Execution Time</h3>
                   <p class="metric">
-                    <app-time-format [timeMs]="result()!.stats.mean"></app-time-format>
+                    <app-time-format [duration]="resultStats()!.mean"></app-time-format>
                   </p>
                 </div>
                 
                 <div class="result-item">
                   <h3>Operations per Second</h3>
-                  <p class="metric highlight">{{ formatNumber(result()!.stats.operationsPerSecond, 0) }} ops/sec</p>
+                  <p class="metric highlight">{{ formatNumber(resultStats()!.operationsPerSecond, 0) }} ops/sec</p>
                 </div>
                 
                 <div class="result-item">
                   <h3>Samples Collected</h3>
-                  <p class="metric">{{ result()!.stats.successfulSamples }} / {{ result()!.samples.length }}</p>
+                  <p class="metric">{{ resultStats()!.successfulSamples }} / {{ result()!.samples.length }}</p>
                 </div>
                 
                 <div class="result-item">
                   <h3>Total Time</h3>
                   <p class="metric">
-                    <app-time-format [timeMs]="result()!.totalTime"></app-time-format>
+                    <app-time-format [duration]="result()!.totalTime"></app-time-format>
                   </p>
                 </div>
               </div>
@@ -87,34 +87,34 @@
                   <div class="stat-row">
                     <span>Median:</span>
                     <span>
-                      <app-time-format [timeMs]="result()!.stats.median"></app-time-format>
+                      <app-time-format [duration]="resultStats()!.median"></app-time-format>
                     </span>
                   </div>
                   <div class="stat-row">
                     <span>Minimum:</span>
                     <span>
-                      <app-time-format [timeMs]="result()!.stats.min"></app-time-format>
+                      <app-time-format [duration]="resultStats()!.min"></app-time-format>
                     </span>
                   </div>
                   <div class="stat-row">
                     <span>Maximum:</span>
                     <span>
-                      <app-time-format [timeMs]="result()!.stats.max"></app-time-format>
+                      <app-time-format [duration]="resultStats()!.max"></app-time-format>
                     </span>
                   </div>
                   <div class="stat-row">
                     <span>Standard Deviation:</span>
                     <span>
-                      <app-time-format [timeMs]="result()!.stats.standardDeviation"></app-time-format>
+                      <app-time-format [duration]="resultStats()!.standardDeviation"></app-time-format>
                     </span>
                   </div>
                   <div class="stat-row">
                     <span>Coefficient of Variation:</span>
-                    <span>{{ formatNumber(result()!.stats.coefficientOfVariation * 100, 2) }}%</span>
+                    <span>{{ formatNumber(resultStats()!.coefficientOfVariation * 100, 2) }}%</span>
                   </div>
                   <div class="stat-row">
                     <span>Failed Samples:</span>
-                    <span>{{ result()!.stats.failedSamples }}</span>
+                    <span>{{ resultStats()!.failedSamples }}</span>
                   </div>
                 </div>
               </div>
