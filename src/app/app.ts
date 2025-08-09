@@ -144,17 +144,55 @@ return sum;`);
   }
 
   protected formatNumber(num: number, decimals: number = 3): string {
+    // For very small numbers, use exponential notation if needed
+    if (Math.abs(num) < Math.pow(10, -decimals) && num !== 0) {
+      return num.toExponential(2);
+    }
     return num.toFixed(decimals);
   }
 
   protected formatTime(timeMs: number): string {
-    if (timeMs < 1) {
-      return `${this.formatNumber(timeMs * 1000, 2)}µs`;
-    } else if (timeMs < 1000) {
-      return `${this.formatNumber(timeMs, 3)}ms`;
-    } else {
-      return `${this.formatNumber(timeMs / 1000, 3)}s`;
+    // Handle null/undefined/NaN
+    if (timeMs === null || timeMs === undefined || isNaN(timeMs)) {
+      return "N/A";
     }
+    
+    // Handle true zero
+    if (timeMs === 0) {
+      return "0.000ns";
+    }
+    
+    // For extremely tiny values, use attoseconds (< 0.000000001ms = 1ps)
+    if (timeMs < 0.000000001) {
+      const attoseconds = timeMs * 1000000000000000;
+      return `${this.formatNumber(attoseconds, 3)}as`;
+    }
+    
+    // For super small values, use femtoseconds (< 0.000001ms = 1ns)
+    if (timeMs < 0.000001) {
+      const femtoseconds = timeMs * 1000000000000;
+      return `${this.formatNumber(femtoseconds, 3)}fs`;
+    }
+    
+    // For extremely small values, use picoseconds (< 0.001ms = 1µs)
+    if (timeMs < 0.001) {
+      const picoseconds = timeMs * 1000000000;
+      return `${this.formatNumber(picoseconds, 3)}ps`;
+    }
+    
+    // For very small values, use nanoseconds (< 1ms)
+    if (timeMs < 1) {
+      const nanoseconds = timeMs * 1000000;
+      return `${this.formatNumber(nanoseconds, 3)}ns`;
+    }
+    
+    // For normal values, use milliseconds (< 1000ms)
+    if (timeMs < 1000) {
+      return `${this.formatNumber(timeMs, 3)}ms`;
+    }
+    
+    // For large values, use seconds
+    return `${this.formatNumber(timeMs / 1000, 3)}s`;
   }
 
   private generateChartData(result: BenchmarkResult): void {
