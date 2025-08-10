@@ -146,7 +146,7 @@ return sum;`);
     }
   }
 
-  protected formatNumber(num: number, decimals: number = 3): string {
+  protected formatNumber(num: number, decimals = 3): string {
     // For very small numbers, use exponential notation if needed
     if (Math.abs(num) < Math.pow(10, -decimals) && num !== 0) {
       return num.toExponential(2);

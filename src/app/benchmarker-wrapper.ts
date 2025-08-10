@@ -1,4 +1,4 @@
-import { benchmark as originalBenchmark, BenchmarkConfig, BenchmarkResult, TimeDuration } from '@bnch/benchmarker';
+import { benchmark as originalBenchmark, BenchmarkConfig, BenchmarkResult } from '@bnch/benchmarker';
 
 /**
  * Wrapper around the @bnch/benchmarker library that fixes worker script loading
