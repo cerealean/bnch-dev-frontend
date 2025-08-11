@@ -8,7 +8,7 @@
     This script helps trigger the deployment workflow via GitHub CLI or provides instructions for manual deployment.
 
 .PARAMETER Version
-    The semantic version to deploy (e.g., "v1.2.3" or "1.2.3")
+    The semantic version to deploy (e.g., "1.2.3"). Optional - if not provided, the latest tag will be used.
 
 .PARAMETER Environment
     The target environment: "production" or "staging" (default: "production")
@@ -20,11 +20,15 @@
     Show this help message
 
 .EXAMPLE
-    .\deploy.ps1 -Version "v1.2.3"
+    .\deploy.ps1 -Version "1.2.3"
     Deploy version 1.2.3 to production
 
 .EXAMPLE
-    .\deploy.ps1 -Version "v1.3.0-beta.1" -Environment "staging" -DryRun
+    .\deploy.ps1
+    Deploy the latest version to production
+
+.EXAMPLE
+    .\deploy.ps1 -Version "1.3.0-beta.1" -Environment "staging" -DryRun
     Test deployment of beta version to staging
 #>
 
@@ -48,22 +52,24 @@ function Show-Help {
 🚀 BNCH Benchmarker App - Deployment Script
 
 USAGE:
-    .\deploy.ps1 -Version <semantic-version> [-Environment <env>] [-DryRun]
+    .\deploy.ps1 [-Version <semantic-version>] [-Environment <env>] [-DryRun]
 
 PARAMETERS:
-    -Version      Semantic version to deploy (e.g., v1.2.3, 1.2.3)
+    -Version      Semantic version to deploy (e.g., 1.2.3) - Optional, uses latest if not provided
     -Environment  Target environment: production or staging (default: production)
     -DryRun       Test deployment without uploading files
     -Help         Show this help message
 
 EXAMPLES:
-    .\deploy.ps1 -Version "v1.2.3"
-    .\deploy.ps1 -Version "v1.3.0-beta.1" -Environment "staging" -DryRun
+    .\deploy.ps1                                    # Deploy latest version to production
+    .\deploy.ps1 -Version "1.2.3"                  # Deploy specific version
+    .\deploy.ps1 -Environment "staging"             # Deploy latest to staging
+    .\deploy.ps1 -Version "1.3.0-beta.1" -Environment "staging" -DryRun
 
 PREREQUISITES:
     1. GitHub CLI (gh) installed and authenticated
     2. Access to the repository's Actions
-    3. Valid semantic version tag exists in the repository
+    3. Git repository with valid semantic version tags (only required if not specifying version)
 
 MANUAL DEPLOYMENT:
     If you prefer to deploy manually:
@@ -128,6 +134,48 @@ function Test-VersionFormat {
     return $true
 }
 
+function Get-LatestVersion {
+    Write-Host "🔍 No version specified, finding latest tag..." -ForegroundColor Yellow
+    
+    try {
+        # Get all tags and filter for semantic versions
+        $tags = git tag --sort=-version:refname 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to get git tags"
+        }
+        
+        foreach ($tag in $tags) {
+            # Check if tag matches semantic version pattern
+            if ($tag -match '^v?[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$') {
+                Write-Host "✅ Latest version found: $tag" -ForegroundColor Green
+                return $tag
+            }
+        }
+        
+        throw "No valid semantic version tags found in repository"
+    }
+    catch {
+        Write-Host "❌ Error getting latest version: $_" -ForegroundColor Red
+        Write-Host "   Make sure you're in a git repository with tagged versions." -ForegroundColor Yellow
+        return $null
+    }
+}
+
+function Format-Version {
+    param([string]$Version)
+    
+    if ([string]::IsNullOrWhiteSpace($Version)) {
+        return $Version
+    }
+    
+    # Ensure version starts with 'v'
+    if (-not $Version.StartsWith('v')) {
+        return "v$Version"
+    }
+    
+    return $Version
+}
+
 function Start-Deployment {
     param(
         [string]$Version,
@@ -171,14 +219,26 @@ if ($Help) {
     exit 0
 }
 
+# Determine version to use
 if ([string]::IsNullOrWhiteSpace($Version)) {
-    Write-Host "❌ Version parameter is required." -ForegroundColor Red
-    Write-Host "   Use -Help for more information." -ForegroundColor Yellow
-    exit 1
+    Write-Host "📦 No version specified, will use latest tag..." -ForegroundColor Cyan
+    $Version = Get-LatestVersion
+    if ($null -eq $Version) {
+        Write-Host ""
+        Write-Host "💡 You can specify a version explicitly:" -ForegroundColor Yellow
+        Write-Host "   .\deploy.ps1 -Version ""1.2.3""" -ForegroundColor Gray
+        exit 1
+    }
+} else {
+    Write-Host "📦 Using specified version: $Version" -ForegroundColor Cyan
 }
 
-if (-not (Test-VersionFormat -Version $Version)) {
-    Write-Host "❌ Invalid semantic version format: $Version" -ForegroundColor Red
+# Normalize version format
+$NormalizedVersion = Format-Version -Version $Version
+Write-Host "🔧 Normalized version: $NormalizedVersion" -ForegroundColor Cyan
+
+if (-not (Test-VersionFormat -Version $NormalizedVersion)) {
+    Write-Host "❌ Invalid semantic version format: $NormalizedVersion" -ForegroundColor Red
     Write-Host "   Expected format: v1.2.3 or 1.2.3" -ForegroundColor Yellow
     exit 1
 }
@@ -189,10 +249,10 @@ if (-not (Test-Prerequisites)) {
     Write-Host "   1. Go to: https://github.com/cerealean/bnch-dev-frontend/actions" -ForegroundColor Blue
     Write-Host "   2. Click 'Deploy to Dreamhost' workflow" -ForegroundColor Blue
     Write-Host "   3. Click 'Run workflow' and fill in:" -ForegroundColor Blue
-    Write-Host "      - Version: $Version" -ForegroundColor Gray
+    Write-Host "      - Version: $NormalizedVersion (or leave empty for latest)" -ForegroundColor Gray
     Write-Host "      - Environment: $Environment" -ForegroundColor Gray
     Write-Host "      - Dry run: $DryRun" -ForegroundColor Gray
     exit 1
 }
 
-Start-Deployment -Version $Version -Environment $Environment -IsDryRun $DryRun
+Start-Deployment -Version $NormalizedVersion -Environment $Environment -IsDryRun $DryRun
