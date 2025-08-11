@@ -162,31 +162,17 @@ jobs:
           # Store current version as the new "previous" for next deployment
           echo "${{ inputs.version }}" > deployment-artifacts/current-version-backup.txt
 
-      - name: Deploy to Dreamhost (${{ inputs.environment }})
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      - name: Deploy to Dreamhost (${{ inputs.environment }}) via SFTP
+        if: ${{ !inputs.dry_run }}
+        uses: Dylan700/sftp-upload-action@latest
         with:
           server: ${{ secrets.DREAMHOST_FTP_SERVER }}
           username: ${{ secrets.DREAMHOST_FTP_USERNAME }}
           password: ${{ secrets.DREAMHOST_FTP_PASSWORD }}
-          protocol: sftp
-          local-dir: ./dist/bnch-benchmarker-app/browser/
-          server-dir: ${{ inputs.environment == 'production' && './bnch.dev/' || './staging.bnch.dev/' }}
-          dry-run: ${{ inputs.dry_run }}
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            .github/
-            src/
-            *.md
-            package*.json
-            angular.json
-            eslint.config.js
-            tsconfig*.json
-            vite.config.js
-            karma.conf.js
-            deployment-artifacts/
-            temp-*/
+          port: 22
+          delete: true
+          uploads: |
+            ./dist/bnch-benchmarker-app/browser/ => ${{ inputs.environment == 'production' && './bnch.dev/' || './staging.bnch.dev/' }}
 
       - name: Deployment Summary
         run: |
