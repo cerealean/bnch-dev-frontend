@@ -5,6 +5,7 @@
     "ng": "ng",
     "build": "ng build",
     "build:prod": "ng build --configuration production",
+    "ci:check": "npm run lint && npm run test:ci",
     "lint": "ng lint",
     "release": "semantic-release",
     "start": "ng serve",
