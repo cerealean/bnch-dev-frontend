@@ -118,7 +118,7 @@ jobs:
           username: ${{ secrets.DREAMHOST_FTP_USERNAME }}
           password: ${{ secrets.DREAMHOST_FTP_PASSWORD }}
           local-dir: ./dist/bnch-benchmarker-app/browser/
-          server-dir: ${{ inputs.environment == 'production' && './' || './staging/' }}
+          server-dir: ${{ inputs.environment == 'production' && './bnch.dev' || './bnch.dev-staging/' }}
           dry-run: ${{ inputs.dry_run }}
           exclude: |
             **/.git*
