@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TimeFormatComponent } from './time-format.component';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { TimeDuration } from '@bnch/benchmarker';
+import { provideZonelessChangeDetection } from '@angular/core';
 
 describe('TimeFormatComponent', () => {
   let component: TimeFormatComponent;
@@ -8,7 +10,8 @@ describe('TimeFormatComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TimeFormatComponent, NoopAnimationsModule]
+      imports: [TimeFormatComponent, NoopAnimationsModule],
+      providers: [provideZonelessChangeDetection()]
     }).compileComponents();
 
     fixture = TestBed.createComponent(TimeFormatComponent);
@@ -20,16 +23,16 @@ describe('TimeFormatComponent', () => {
   });
 
   it('should format seconds correctly in auto mode', () => {
-    component.timeMs = 5000; // 5 seconds
+    fixture.componentRef.setInput('duration', TimeDuration.fromSeconds(5));
     fixture.detectChanges();
     
     const compiled = fixture.nativeElement as HTMLElement;
     const button = compiled.querySelector('.time-format-button');
-    expect(button?.textContent?.trim()).toContain('5s');
+    expect(button?.textContent?.trim()).toContain('5.00s');
   });
 
   it('should format milliseconds correctly in auto mode', () => {
-    component.timeMs = 150; // 150 milliseconds
+    fixture.componentRef.setInput('duration', TimeDuration.fromMilliseconds(150));
     fixture.detectChanges();
     
     const compiled = fixture.nativeElement as HTMLElement;
@@ -38,7 +41,7 @@ describe('TimeFormatComponent', () => {
   });
 
   it('should format microseconds correctly in auto mode', () => {
-    component.timeMs = 0.1; // 0.1 milliseconds = 100 microseconds
+    fixture.componentRef.setInput('duration', TimeDuration.fromMilliseconds(0.1));
     fixture.detectChanges();
     
     const compiled = fixture.nativeElement as HTMLElement;
@@ -47,7 +50,7 @@ describe('TimeFormatComponent', () => {
   });
 
   it('should handle zero correctly', () => {
-    component.timeMs = 0;
+    fixture.componentRef.setInput('duration', TimeDuration.fromMilliseconds(0));
     fixture.detectChanges();
     
     const compiled = fixture.nativeElement as HTMLElement;
@@ -56,7 +59,7 @@ describe('TimeFormatComponent', () => {
   });
 
   it('should handle invalid values correctly', () => {
-    component.timeMs = NaN;
+    fixture.componentRef.setInput('duration', TimeDuration.fromNanoseconds(NaN));
     fixture.detectChanges();
     
     const compiled = fixture.nativeElement as HTMLElement;
@@ -65,7 +68,7 @@ describe('TimeFormatComponent', () => {
   });
 
   it('should be clickable and show dropdown icon', () => {
-    component.timeMs = 1500; // 1.5 seconds
+    fixture.componentRef.setInput('duration', TimeDuration.fromSeconds(1.5));
     fixture.detectChanges();
     
     const compiled = fixture.nativeElement as HTMLElement;
@@ -78,7 +81,7 @@ describe('TimeFormatComponent', () => {
   });
 
   it('should allow unit selection', () => {
-    component.timeMs = 1500; // 1.5 seconds
+    fixture.componentRef.setInput('duration', TimeDuration.fromSeconds(1.5));
     fixture.detectChanges();
     
     // Test selecting milliseconds unit
@@ -91,7 +94,7 @@ describe('TimeFormatComponent', () => {
   });
 
   it('should calculate available units correctly', () => {
-    component.timeMs = 1000; // 1 second
+    fixture.componentRef.setInput('duration', TimeDuration.fromSeconds(1)); 
     fixture.detectChanges();
     
     const availableUnits = component['availableUnits']();
