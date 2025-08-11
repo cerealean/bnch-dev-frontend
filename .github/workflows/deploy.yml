@@ -76,18 +76,30 @@ jobs:
 
       - name: Build Angular application for ${{ inputs.environment }}
         run: |
+          echo "Building for environment: ${{ inputs.environment }}"
           if [ "${{ inputs.environment }}" = "production" ]; then
+            echo "🏗️ Building production version..."
             npm run build:prod
           else
+            echo "🏗️ Building development version..."
             npm run build
           fi
+          
+          # Verify build output exists
+          if [ ! -d "./dist/bnch-benchmarker-app/browser" ]; then
+            echo "❌ Build failed: Output directory not found"
+            exit 1
+          fi
+          
+          echo "✅ Build completed successfully"
+          ls -la ./dist/bnch-benchmarker-app/browser/ | head -10
 
       - name: Create deployment info file
         run: |
           mkdir -p ./dist/bnch-benchmarker-app/browser
           
           # Create deployment info with proper JSON formatting
-          cat > ./dist/bnch-benchmarker-app/browser/deployment-info.json << 'JSON_EOF'
+          cat > ./dist/bnch-benchmarker-app/browser/deployment-info.json << JSON_EOF
           {
             "version": "${{ inputs.version }}",
             "environment": "${{ inputs.environment }}",
@@ -110,6 +122,19 @@ jobs:
           else
             echo "⚠️ jq not available, skipping JSON validation"
           fi
+          
+          # Display deployment info content for verification
+          echo "📄 Deployment info content:"
+          cat ./dist/bnch-benchmarker-app/browser/deployment-info.json
+
+      - name: Pre-deployment verification
+        run: |
+          echo "🔍 Pre-deployment verification..."
+          echo "📁 Files to be deployed:"
+          find ./dist/bnch-benchmarker-app/browser/ -type f | head -20
+          echo ""
+          echo "📊 Total files: $(find ./dist/bnch-benchmarker-app/browser/ -type f | wc -l)"
+          echo "📏 Total size: $(du -sh ./dist/bnch-benchmarker-app/browser/ | cut -f1)"
 
       - name: Deploy to Dreamhost (${{ inputs.environment }})
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -143,17 +168,23 @@ jobs:
           echo "**Dry Run:** ${{ inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
           echo "**Git Commit:** $(git rev-parse HEAD)" >> $GITHUB_STEP_SUMMARY
           echo "**Deployed At:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment ID:** ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered By:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             echo "✅ **Dry run completed successfully!** No files were actually uploaded." >> $GITHUB_STEP_SUMMARY
           else
             echo "✅ **Deployment completed successfully!**" >> $GITHUB_STEP_SUMMARY
             if [ "${{ inputs.environment }}" = "production" ]; then
-              echo "🌐 **Live URL:** Your production domain" >> $GITHUB_STEP_SUMMARY
+              echo "🌐 **Live URL:** [https://bnch.dev](https://bnch.dev)" >> $GITHUB_STEP_SUMMARY
             else
-              echo "🔧 **Staging URL:** Your staging domain/staging/" >> $GITHUB_STEP_SUMMARY
+              echo "🔧 **Staging URL:** [https://bnch.dev/staging](https://bnch.dev/staging)" >> $GITHUB_STEP_SUMMARY
             fi
           fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Deployment Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Size:** $(du -sh ./dist/bnch-benchmarker-app/browser/ 2>/dev/null | cut -f1 || echo 'Unknown')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Files Deployed:** $(find ./dist/bnch-benchmarker-app/browser/ -type f 2>/dev/null | wc -l || echo 'Unknown')" >> $GITHUB_STEP_SUMMARY
 
       - name: Create deployment artifact
         if: ${{ !inputs.dry_run }}
