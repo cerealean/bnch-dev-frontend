@@ -1,3 +1,16 @@
+# [1.2.0](https://github.com/cerealean/bnch-dev-frontend/compare/v1.1.0...v1.2.0) (2025-08-11)
+
+
+### Bug Fixes
+
+* change to use sftp ([9fff226](https://github.com/cerealean/bnch-dev-frontend/commit/9fff226b76eda7871a981c0411ce13cd5744db62))
+* Linter fixes ([a6336b0](https://github.com/cerealean/bnch-dev-frontend/commit/a6336b0a926e4dd9f6b51b81661aac67a4587c5b))
+
+
+### Features
+
+* Added datetime duration to time format ([57dc2f7](https://github.com/cerealean/bnch-dev-frontend/commit/57dc2f7f5527d8d94c4009292d1ac89124b956c5))
+
 # [1.1.0](https://github.com/cerealean/bnch-dev-frontend/compare/v1.0.0...v1.1.0) (2025-08-11)
 
 
