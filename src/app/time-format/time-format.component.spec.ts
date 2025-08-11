@@ -3,7 +3,6 @@ import { TimeFormatComponent } from './time-format.component';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { TimeDuration } from '@bnch/benchmarker';
 import { provideZonelessChangeDetection } from '@angular/core';
-import { DebugElement } from '@angular/core';
 import { By } from '@angular/platform-browser';
 
 describe('TimeFormatComponent', () => {
@@ -300,7 +299,7 @@ describe('TimeFormatComponent', () => {
     });
 
     it('should format numbers correctly for different ranges', () => {
-      const formatNumber = (component as any).formatNumber.bind(component);
+      const formatNumber = component['formatNumber'].bind(component);
       
       // Test large numbers
       expect(formatNumber(1500000, 3)).toBe('1.50e+6');
@@ -357,7 +356,7 @@ describe('TimeFormatComponent', () => {
         
         const datetimeDuration = component['datetimeDuration']();
         if (datetimeDuration) {
-          expect(datetimeDuration).toMatch(/^PT[\d\.e\-\+]+S$/);
+          expect(datetimeDuration).toMatch(/^PT[\d.e\-+]+S$/);
         }
       });
     });
