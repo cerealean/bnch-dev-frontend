@@ -1,0 +1,117 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        type: choice
+        options:
+          - production
+          - staging
+      target_version:
+        description: 'Version to rollback to (leave empty to use previous version)'
+        required: false
+        type: string
+      confirm_rollback:
+        description: 'Type "CONFIRM" to proceed with rollback'
+        required: true
+        type: string
+
+jobs:
+  rollback:
+    name: Rollback ${{ inputs.environment }} to previous version
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Validate rollback confirmation
+        run: |
+          if [ "${{ inputs.confirm_rollback }}" != "CONFIRM" ]; then
+            echo "❌ Rollback not confirmed. Please type 'CONFIRM' to proceed."
+            exit 1
+          fi
+          echo "✅ Rollback confirmed"
+
+      - name: Download latest deployment info
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-info-${{ inputs.environment }}-latest
+          path: ./current-deployment/
+
+      - name: Determine rollback version
+        id: rollback_version
+        run: |
+          if [ -n "${{ inputs.target_version }}" ]; then
+            ROLLBACK_VERSION="${{ inputs.target_version }}"
+            echo "🎯 Using specified version: $ROLLBACK_VERSION"
+          elif [ -f "./current-deployment/previous-version.txt" ]; then
+            ROLLBACK_VERSION=$(cat ./current-deployment/previous-version.txt)
+            if [ "$ROLLBACK_VERSION" = "none" ]; then
+              echo "❌ No previous version available for rollback"
+              exit 1
+            fi
+            echo "⏮️ Using previous version: $ROLLBACK_VERSION"
+          else
+            echo "❌ No deployment history found and no target version specified"
+            exit 1
+          fi
+          
+          # Validate version format
+          if [[ ! "$ROLLBACK_VERSION" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$ ]]; then
+            echo "❌ Invalid semantic version format: $ROLLBACK_VERSION"
+            exit 1
+          fi
+          
+          echo "rollback_version=$ROLLBACK_VERSION" >> $GITHUB_OUTPUT
+          echo "ROLLBACK_VERSION=$ROLLBACK_VERSION" >> $GITHUB_ENV
+
+      - name: Display rollback information
+        run: |
+          echo "## 🔄 Rollback Information" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Rollback to Version:** $ROLLBACK_VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered By:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Rollback Time:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f "./current-deployment/deployed-version.txt" ]; then
+            CURRENT_VERSION=$(cat ./current-deployment/deployed-version.txt)
+            echo "**Current Version:** $CURRENT_VERSION" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Trigger deployment workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const response = await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'deploy.yml',
+              ref: 'main',
+              inputs: {
+                version: '${{ steps.rollback_version.outputs.rollback_version }}',
+                environment: '${{ inputs.environment }}',
+                dry_run: 'false'
+              }
+            });
+            
+            console.log('✅ Rollback deployment triggered');
+            console.log('Workflow run will appear at: https://github.com/${{ github.repository }}/actions');
+
+      - name: Rollback summary
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Rollback Initiated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The rollback deployment has been triggered. Please monitor the deployment workflow for progress." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 **Monitor Progress:** [View Deployments](https://github.com/${{ github.repository }}/actions/workflows/deploy.yml)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Rollback Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target Version:** \`$ROLLBACK_VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** \`${{ inputs.environment }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Initiated By:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Rollback ID:** ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY

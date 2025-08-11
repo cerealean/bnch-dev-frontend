@@ -111,6 +111,7 @@ You can also trigger deployments from other workflows or via the GitHub API:
 - **Dry Run Mode**: Test deployments without actually uploading files
 - **Pre-deployment Validation**: Runs tests and linting before deployment
 - **Deployment Info**: Creates a deployment info file with version and timestamp information
+- **Rollback Capability**: Automatic tracking of previous versions for easy rollback
 
 ### Enhanced Functionality
 - **Angular Routing Support**: Includes `.htaccess` file from the project for proper routing
@@ -159,6 +160,52 @@ Version: v1.3.0-beta.1
 Environment: staging
 Dry run: true
 ```
+
+## Rollback Deployments
+
+If you need to rollback a deployment, you have several options:
+
+### Option 1: Using the Rollback Script (Recommended)
+
+```powershell
+# Rollback to previous version automatically
+.\rollback.ps1 -Environment "production"
+
+# Rollback to a specific version
+.\rollback.ps1 -Environment "staging" -Version "v1.2.0"
+
+# Test rollback (dry run)
+.\rollback.ps1 -Environment "production" -DryRun
+
+# Get help
+.\rollback.ps1 -Help
+```
+
+### Option 2: Using the Rollback Workflow
+
+1. **Go to Actions tab** in your GitHub repository
+2. **Click on "Rollback Deployment"** workflow
+3. **Click "Run workflow"** button
+4. **Fill in the parameters**:
+   - **Environment**: Choose `production` or `staging`
+   - **Target Version**: Leave empty for previous version or specify exact version
+   - **Confirm Rollback**: Type `CONFIRM` to proceed
+
+### Option 3: Manual Deployment of Previous Version
+
+If you know the exact version to rollback to, you can use the regular deployment workflow:
+
+```powershell
+.\deploy.ps1 -Version "v1.2.0" -Environment "production"
+```
+
+## Rollback Features
+
+- **🔍 Automatic Detection**: Finds the previous deployed version automatically
+- **🎯 Specific Version**: Option to rollback to any specific version
+- **⚠️ Safety Confirmation**: Requires explicit confirmation to prevent accidents
+- **📊 Rollback History**: Tracks rollback operations for audit purposes
+- **🔗 Integrated Workflow**: Uses the same deployment process for consistency
 
 ## Troubleshooting
 

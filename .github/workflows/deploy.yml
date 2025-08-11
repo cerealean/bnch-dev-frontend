@@ -136,6 +136,32 @@ jobs:
           echo "📊 Total files: $(find ./dist/bnch-benchmarker-app/browser/ -type f | wc -l)"
           echo "📏 Total size: $(du -sh ./dist/bnch-benchmarker-app/browser/ | cut -f1)"
 
+      - name: Download previous deployment info for rollback
+        if: ${{ !inputs.dry_run }}
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-info-${{ inputs.environment }}-latest
+          path: ./previous-deployment/
+
+      - name: Prepare rollback information
+        if: ${{ !inputs.dry_run }}
+        run: |
+          mkdir -p deployment-artifacts
+          
+          # Get previous version if available
+          if [ -f "./previous-deployment/deployed-version.txt" ]; then
+            PREVIOUS_VERSION=$(cat ./previous-deployment/deployed-version.txt)
+            echo "📋 Previous version detected: $PREVIOUS_VERSION"
+            echo "$PREVIOUS_VERSION" > deployment-artifacts/previous-version.txt
+          else
+            echo "📋 No previous deployment found"
+            echo "none" > deployment-artifacts/previous-version.txt
+          fi
+          
+          # Store current version as the new "previous" for next deployment
+          echo "${{ inputs.version }}" > deployment-artifacts/current-version-backup.txt
+
       - name: Deploy to Dreamhost (${{ inputs.environment }})
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -185,6 +211,29 @@ jobs:
           echo "### 📊 Deployment Details" >> $GITHUB_STEP_SUMMARY
           echo "- **Build Size:** $(du -sh ./dist/bnch-benchmarker-app/browser/ 2>/dev/null | cut -f1 || echo 'Unknown')" >> $GITHUB_STEP_SUMMARY
           echo "- **Files Deployed:** $(find ./dist/bnch-benchmarker-app/browser/ -type f 2>/dev/null | wc -l || echo 'Unknown')" >> $GITHUB_STEP_SUMMARY
+          
+          # Add rollback information to summary
+          if [ "${{ inputs.dry_run }}" = "false" ] && [ -f "deployment-artifacts/previous-version.txt" ]; then
+            PREVIOUS_VERSION=$(cat deployment-artifacts/previous-version.txt)
+            if [ "$PREVIOUS_VERSION" != "none" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### 🔄 Rollback Information" >> $GITHUB_STEP_SUMMARY
+              echo "If you need to rollback this deployment:" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "**Previous Version:** \`$PREVIOUS_VERSION\`" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "**Rollback Commands:**" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`powershell" >> $GITHUB_STEP_SUMMARY
+              echo "# Using PowerShell script:" >> $GITHUB_STEP_SUMMARY
+              echo "./deploy.ps1 -Version \"$PREVIOUS_VERSION\" -Environment \"${{ inputs.environment }}\"" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "# Using GitHub CLI:" >> $GITHUB_STEP_SUMMARY
+              echo "gh workflow run deploy.yml --field version=\"$PREVIOUS_VERSION\" --field environment=\"${{ inputs.environment }}\"" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "📖 [Manual Rollback Instructions](https://github.com/${{ github.repository }}/actions/workflows/deploy.yml)" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
 
       - name: Create deployment artifact
         if: ${{ !inputs.dry_run }}
@@ -194,11 +243,39 @@ jobs:
           echo "${{ inputs.environment }}" > deployment-artifacts/environment.txt
           echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > deployment-artifacts/deployment-time.txt
           echo "$(git rev-parse HEAD)" > deployment-artifacts/git-commit.txt
+          
+          # Create rollback information
+          echo "Creating rollback information..."
+          cp ./dist/bnch-benchmarker-app/browser/deployment-info.json deployment-artifacts/
+          
+          # Store deployment history for rollback capability
+          cat > deployment-artifacts/rollback-info.json << ROLLBACK_EOF
+          {
+            "currentVersion": "${{ inputs.version }}",
+            "previousVersion": "$(cat deployment-artifacts/previous-version.txt 2>/dev/null || echo 'none')",
+            "environment": "${{ inputs.environment }}",
+            "deploymentTime": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "gitCommit": "$(git rev-parse HEAD)",
+            "rollbackInstructions": {
+              "manual": "Go to Actions > Deploy to Dreamhost > Run workflow with previous version",
+              "script": "./deploy.ps1 -Version \"$(cat deployment-artifacts/previous-version.txt 2>/dev/null || echo 'PREVIOUS_VERSION')\" -Environment \"${{ inputs.environment }}\"",
+              "workflow": "gh workflow run deploy.yml --field version=\"$(cat deployment-artifacts/previous-version.txt 2>/dev/null || echo 'PREVIOUS_VERSION')\" --field environment=\"${{ inputs.environment }}\""
+            }
+          }
+          ROLLBACK_EOF
 
       - name: Upload deployment artifacts
         if: ${{ !inputs.dry_run }}
         uses: actions/upload-artifact@v4
         with:
           name: deployment-info-${{ inputs.environment }}-${{ inputs.version }}
+          path: deployment-artifacts/
+          retention-days: 90
+
+      - name: Upload latest deployment info for rollback
+        if: ${{ !inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-info-${{ inputs.environment }}-latest
           path: deployment-artifacts/
           retention-days: 90
