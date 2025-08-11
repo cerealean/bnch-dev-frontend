@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/cerealean/bnch-dev-frontend/compare/v1.2.0...v1.2.1) (2025-08-11)
+
+
+### Bug Fixes
+
+* fix deployment script ([c1ed7ff](https://github.com/cerealean/bnch-dev-frontend/commit/c1ed7ff6fc58c907de3ab015e887854dcf11b140))
+
 # [1.2.0](https://github.com/cerealean/bnch-dev-frontend/compare/v1.1.0...v1.2.0) (2025-08-11)
 
 
