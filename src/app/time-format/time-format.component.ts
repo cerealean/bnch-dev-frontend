@@ -30,7 +30,7 @@ interface TimeUnit {
       class="time-format-button"
       [matTooltip]="formattedTime().tooltip"
       matTooltipPosition="above">
-      <span class="time-value">{{ formattedTime().value }}</span>
+      <time class="time-value" [attr.datetime]="datetimeDuration()">{{ formattedTime().value }}</time>
       <mat-icon class="dropdown-icon">arrow_drop_down</mat-icon>
     </button>
 
@@ -154,6 +154,35 @@ export class TimeFormatComponent {
   readonly display = computed(() => this.duration().toString());
 
   protected readonly selectedUnit = signal<string>('auto');
+
+  // Computed signal for HTML5 datetime duration string
+  protected readonly datetimeDuration = computed(() => {
+    const timeMs = this.timeMs();
+    
+    // Handle invalid values and zero
+    if (timeMs === null || timeMs === undefined || isNaN(timeMs) || timeMs <= 0) {
+      return undefined;
+    }
+    
+    // Convert milliseconds to seconds
+    const totalSeconds = timeMs / 1000;
+    
+    // For very small values (< 0.001 seconds), use scientific notation
+    if (totalSeconds < 0.001) {
+      return `PT${totalSeconds.toExponential(3)}S`;
+    }
+    
+    // For values >= 0.001 seconds, format appropriately
+    if (totalSeconds >= 1) {
+      // For values >= 1 second, use up to 3 decimal places
+      const formatted = totalSeconds.toFixed(3).replace(/\.?0+$/, '');
+      return `PT${formatted}S`;
+    } else {
+      // For fractional seconds < 1, use up to 6 decimal places to preserve precision
+      const formatted = totalSeconds.toFixed(6).replace(/\.?0+$/, '');
+      return `PT${formatted}S`;
+    }
+  });
 
   protected readonly timeUnits: TimeUnit[] = [
     { key: 's', name: 'Seconds', symbol: 's', multiplier: 0.001, description: 'Base SI unit' },
