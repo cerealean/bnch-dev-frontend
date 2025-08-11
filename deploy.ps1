@@ -109,10 +109,23 @@ function Test-VersionFormat {
     # Remove 'v' prefix if present for validation
     $cleanVersion = $Version -replace '^v', ''
     
-    # Basic semantic version pattern
+    # Enhanced semantic version pattern with better validation
     $semverPattern = '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$'
     
-    return $cleanVersion -match $semverPattern
+    if (-not ($cleanVersion -match $semverPattern)) {
+        return $false
+    }
+    
+    # Additional validation: ensure no leading zeros
+    $parts = $cleanVersion.Split('-')[0].Split('.')
+    foreach ($part in $parts) {
+        if ($part.Length -gt 1 -and $part.StartsWith('0')) {
+            Write-Host "⚠️ Warning: Version part '$part' has leading zero" -ForegroundColor Yellow
+            return $false
+        }
+    }
+    
+    return $true
 }
 
 function Start-Deployment {

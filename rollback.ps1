@@ -118,25 +118,30 @@ function Get-PreviousVersion {
         $artifactName = "deployment-info-$Environment-latest"
         
         # Use gh CLI to download artifact from latest successful run
-        $runs = gh run list --workflow=deploy.yml --status=success --limit=5 --json=databaseId | ConvertFrom-Json
+        $runs = gh run list --workflow=deploy.yml --status=success --limit=10 --json=databaseId,conclusion | ConvertFrom-Json
         
         foreach ($run in $runs) {
             try {
+                Write-Host "  Checking run $($run.databaseId)..." -ForegroundColor Gray
                 gh run download $run.databaseId --name $artifactName --dir "temp-rollback" 2>$null
                 if (Test-Path "temp-rollback\previous-version.txt") {
                     $previousVersion = Get-Content "temp-rollback\previous-version.txt" -Raw
-                    Remove-Item "temp-rollback" -Recurse -Force
+                    Remove-Item "temp-rollback" -Recurse -Force -ErrorAction SilentlyContinue
                     
                     if ($previousVersion -and $previousVersion.Trim() -ne "none") {
+                        Write-Host "  ✅ Found in run $($run.databaseId)" -ForegroundColor Green
                         return $previousVersion.Trim()
                     }
                 }
+                Remove-Item "temp-rollback" -Recurse -Force -ErrorAction SilentlyContinue
             }
             catch {
                 # Continue to next run
+                Remove-Item "temp-rollback" -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
         
+        Write-Host "  ❌ No previous version found in recent deployments" -ForegroundColor Red
         return $null
     }
     catch {

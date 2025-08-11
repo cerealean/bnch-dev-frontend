@@ -169,7 +169,7 @@ jobs:
           username: ${{ secrets.DREAMHOST_FTP_USERNAME }}
           password: ${{ secrets.DREAMHOST_FTP_PASSWORD }}
           local-dir: ./dist/bnch-benchmarker-app/browser/
-          server-dir: ${{ inputs.environment == 'production' && './bnch.dev' || './bnch.dev-staging/' }}
+          server-dir: ${{ inputs.environment == 'production' && './bnch.dev/' || './bnch.dev-staging/' }}
           dry-run: ${{ inputs.dry_run }}
           exclude: |
             **/.git*
@@ -184,6 +184,8 @@ jobs:
             tsconfig*.json
             vite.config.js
             karma.conf.js
+            deployment-artifacts/
+            temp-*/
 
       - name: Deployment Summary
         run: |
@@ -204,7 +206,7 @@ jobs:
             if [ "${{ inputs.environment }}" = "production" ]; then
               echo "🌐 **Live URL:** [https://bnch.dev](https://bnch.dev)" >> $GITHUB_STEP_SUMMARY
             else
-              echo "🔧 **Staging URL:** [https://bnch.dev/staging](https://bnch.dev/staging)" >> $GITHUB_STEP_SUMMARY
+              echo "🔧 **Staging URL:** [https://bnch.dev-staging](https://bnch.dev-staging)" >> $GITHUB_STEP_SUMMARY
             fi
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -224,14 +226,17 @@ jobs:
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "**Rollback Commands:**" >> $GITHUB_STEP_SUMMARY
               echo "\`\`\`powershell" >> $GITHUB_STEP_SUMMARY
-              echo "# Using PowerShell script:" >> $GITHUB_STEP_SUMMARY
+              echo "# Using rollback script:" >> $GITHUB_STEP_SUMMARY
+              echo "./rollback.ps1 -Environment \"${{ inputs.environment }}\"" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "# Using deploy script with previous version:" >> $GITHUB_STEP_SUMMARY
               echo "./deploy.ps1 -Version \"$PREVIOUS_VERSION\" -Environment \"${{ inputs.environment }}\"" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "# Using GitHub CLI:" >> $GITHUB_STEP_SUMMARY
-              echo "gh workflow run deploy.yml --field version=\"$PREVIOUS_VERSION\" --field environment=\"${{ inputs.environment }}\"" >> $GITHUB_STEP_SUMMARY
+              echo "gh workflow run rollback.yml --field environment=\"${{ inputs.environment }}\" --field confirm_rollback=\"CONFIRM\"" >> $GITHUB_STEP_SUMMARY
               echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
-              echo "📖 [Manual Rollback Instructions](https://github.com/${{ github.repository }}/actions/workflows/deploy.yml)" >> $GITHUB_STEP_SUMMARY
+              echo "📖 [Rollback Workflow](https://github.com/${{ github.repository }}/actions/workflows/rollback.yml)" >> $GITHUB_STEP_SUMMARY
             fi
           fi
 
