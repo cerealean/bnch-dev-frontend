@@ -149,8 +149,6 @@ interface TimeUnit {
   `]
 })
 export class TimeFormatComponent {
-//   @Input({ required: true }) timeMs!: number | TimeDuration;
-  
   readonly duration = input.required<TimeDuration>();
   readonly timeMs = computed(() => this.duration().milliseconds);
   readonly display = computed(() => this.duration().toString());
