@@ -113,9 +113,10 @@ You can also trigger deployments from other workflows or via the GitHub API:
 - **Deployment Info**: Creates a deployment info file with version and timestamp information
 
 ### Enhanced Functionality
-- **Angular Routing Support**: Automatically creates `.htaccess` file for proper routing
+- **Angular Routing Support**: Includes `.htaccess` file from the project for proper routing
 - **Security Headers**: Adds security headers via `.htaccess`
 - **Static Asset Caching**: Configures browser caching for better performance
+- **Gzip Compression**: Enables compression for faster loading
 - **Deployment Artifacts**: Saves deployment information as downloadable artifacts
 
 ## Workflow Overview
@@ -141,7 +142,7 @@ The workflow uploads the following files from `./dist/bnch-benchmarker-app/brows
 - Assets - Images, fonts, and other static files
 - `worker-script.js` - Required for the @bnch/benchmarker library
 - `deployment-info.json` - Metadata about the deployment
-- `.htaccess` - Server configuration for Angular routing and security
+- `.htaccess` - Server configuration for Angular routing and security (from `public/.htaccess`)
 
 ## Examples
 
