@@ -169,7 +169,7 @@ jobs:
           username: ${{ secrets.DREAMHOST_FTP_USERNAME }}
           password: ${{ secrets.DREAMHOST_FTP_PASSWORD }}
           local-dir: ./dist/bnch-benchmarker-app/browser/
-          server-dir: ${{ inputs.environment == 'production' && './bnch.dev/' || './bnch.dev-staging/' }}
+          server-dir: ${{ inputs.environment == 'production' && './bnch.dev/' || './staging.bnch.dev/' }}
           dry-run: ${{ inputs.dry_run }}
           exclude: |
             **/.git*
@@ -206,7 +206,7 @@ jobs:
             if [ "${{ inputs.environment }}" = "production" ]; then
               echo "🌐 **Live URL:** [https://bnch.dev](https://bnch.dev)" >> $GITHUB_STEP_SUMMARY
             else
-              echo "🔧 **Staging URL:** [https://bnch.dev-staging](https://bnch.dev-staging)" >> $GITHUB_STEP_SUMMARY
+              echo "🔧 **Staging URL:** [https://staging.bnch.dev](https://staging.bnch.dev)" >> $GITHUB_STEP_SUMMARY
             fi
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
