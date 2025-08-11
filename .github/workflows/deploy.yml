@@ -84,16 +84,32 @@ jobs:
 
       - name: Create deployment info file
         run: |
-          cat > ./dist/bnch-benchmarker-app/browser/deployment-info.json << EOF
+          mkdir -p ./dist/bnch-benchmarker-app/browser
+          
+          # Create deployment info with proper JSON formatting
+          cat > ./dist/bnch-benchmarker-app/browser/deployment-info.json << 'JSON_EOF'
           {
             "version": "${{ inputs.version }}",
             "environment": "${{ inputs.environment }}",
             "deployedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "gitCommit": "$(git rev-parse HEAD)",
             "gitBranch": "$(git rev-parse --abbrev-ref HEAD)",
-            "buildNumber": "${{ github.run_number }}"
+            "buildNumber": "${{ github.run_number }}",
+            "deploymentId": "${{ github.run_id }}",
+            "repository": "${{ github.repository }}",
+            "workflow": "${{ github.workflow }}",
+            "actor": "${{ github.actor }}"
           }
-          EOF
+          JSON_EOF
+          
+          # Validate JSON format
+          if command -v jq > /dev/null; then
+            echo "Validating JSON format..."
+            jq . ./dist/bnch-benchmarker-app/browser/deployment-info.json > /dev/null
+            echo "✅ deployment-info.json is valid JSON"
+          else
+            echo "⚠️ jq not available, skipping JSON validation"
+          fi
 
       - name: Deploy to Dreamhost (${{ inputs.environment }})
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
