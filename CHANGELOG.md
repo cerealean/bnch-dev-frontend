@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/cerealean/bnch-dev-frontend/compare/v1.2.1...v1.2.2) (2025-08-11)
+
+
+### Performance Improvements
+
+* add app version to main element ([ef54e80](https://github.com/cerealean/bnch-dev-frontend/commit/ef54e800e061237e7eb67efe2968c17b56f39099))
+
 ## [1.2.1](https://github.com/cerealean/bnch-dev-frontend/compare/v1.2.0...v1.2.1) (2025-08-11)
 
 
