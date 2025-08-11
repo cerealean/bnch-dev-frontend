@@ -9,7 +9,7 @@
     </p>
   </header>
 
-  <main class="main-content">
+  <main class="main-content" [attr.data-app-version]="appVersion">
     <div class="input-section">
       <textarea 
         [(ngModel)]="code" 

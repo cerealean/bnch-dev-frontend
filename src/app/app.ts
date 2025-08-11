@@ -7,6 +7,8 @@ import { Chart, ChartConfiguration, ChartData, registerables } from 'chart.js';
 import { benchmark, BenchmarkResult } from './benchmarker-wrapper';
 import { TimeFormatComponent } from './time-format/time-format.component';
 import { TimeDuration } from '@bnch/benchmarker'
+import { version as appVersion } from '../../package.json';
+
 // Register Chart.js components
 Chart.register(...registerables);
 
@@ -23,6 +25,8 @@ Chart.register(...registerables);
   styleUrl: './app.scss'
 })
 export class App {
+  protected readonly appVersion = appVersion;
+
   protected readonly code = signal(`// Enter your JavaScript code here to benchmark
 // Example:
 let sum = 0;
