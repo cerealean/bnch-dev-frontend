@@ -1,0 +1,182 @@
+name: Deploy to Dreamhost
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Semantic version to deploy (e.g., v1.2.3)'
+        required: true
+        type: string
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      dry_run:
+        description: 'Perform a dry run (test deployment without actually uploading files)'
+        required: false
+        default: false
+        type: boolean
+
+  workflow_call:
+    inputs:
+      version:
+        description: 'Semantic version to deploy (e.g., v1.2.3)'
+        required: true
+        type: string
+      environment:
+        description: 'Deployment environment'
+        required: false
+        default: 'production'
+        type: string
+      dry_run:
+        description: 'Perform a dry run'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  deploy:
+    name: Deploy v${{ inputs.version }} to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Validate version format
+        run: |
+          if [[ ! "${{ inputs.version }}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$ ]]; then
+            echo "Error: Invalid semantic version format. Expected format: v1.2.3 or 1.2.3"
+            exit 1
+          fi
+          echo "Version ${{ inputs.version }} is valid"
+
+      - name: Checkout specific version
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test:ci
+
+      - name: Build Angular application for ${{ inputs.environment }}
+        run: |
+          if [ "${{ inputs.environment }}" = "production" ]; then
+            npm run build:prod
+          else
+            npm run build
+          fi
+
+      - name: Create deployment info file
+        run: |
+          cat > ./dist/bnch-benchmarker-app/browser/deployment-info.json << EOF
+          {
+            "version": "${{ inputs.version }}",
+            "environment": "${{ inputs.environment }}",
+            "deployedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "gitCommit": "$(git rev-parse HEAD)",
+            "gitBranch": "$(git rev-parse --abbrev-ref HEAD)",
+            "buildNumber": "${{ github.run_number }}"
+          }
+          EOF
+
+      - name: Create .htaccess for Angular routing
+        run: |
+          cat > ./dist/bnch-benchmarker-app/browser/.htaccess << 'EOF'
+          # Angular routing support
+          RewriteEngine On
+          RewriteBase /
+          
+          # Handle Angular routes
+          RewriteRule ^index\.html$ - [L]
+          RewriteCond %{REQUEST_FILENAME} !-f
+          RewriteCond %{REQUEST_FILENAME} !-d
+          RewriteRule . /index.html [L]
+          
+          # Security headers
+          Header always set X-Content-Type-Options nosniff
+          Header always set X-Frame-Options DENY
+          Header always set X-XSS-Protection "1; mode=block"
+          
+          # Cache static assets
+          <filesMatch "\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$">
+            ExpiresActive On
+            ExpiresDefault "access plus 1 month"
+          </filesMatch>
+          EOF
+
+      - name: Deploy to Dreamhost (${{ inputs.environment }})
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.DREAMHOST_FTP_SERVER }}
+          username: ${{ secrets.DREAMHOST_FTP_USERNAME }}
+          password: ${{ secrets.DREAMHOST_FTP_PASSWORD }}
+          local-dir: ./dist/bnch-benchmarker-app/browser/
+          server-dir: ${{ inputs.environment == 'production' && './' || './staging/' }}
+          dry-run: ${{ inputs.dry_run }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            .github/
+            src/
+            *.md
+            package*.json
+            angular.json
+            eslint.config.js
+            tsconfig*.json
+            vite.config.js
+            karma.conf.js
+
+      - name: Deployment Summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Dry Run:** ${{ inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Git Commit:** $(git rev-parse HEAD)" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed At:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "✅ **Dry run completed successfully!** No files were actually uploaded." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ **Deployment completed successfully!**" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ inputs.environment }}" = "production" ]; then
+              echo "🌐 **Live URL:** Your production domain" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "🔧 **Staging URL:** Your staging domain/staging/" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+      - name: Create deployment artifact
+        if: ${{ !inputs.dry_run }}
+        run: |
+          mkdir -p deployment-artifacts
+          echo "${{ inputs.version }}" > deployment-artifacts/deployed-version.txt
+          echo "${{ inputs.environment }}" > deployment-artifacts/environment.txt
+          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > deployment-artifacts/deployment-time.txt
+          echo "$(git rev-parse HEAD)" > deployment-artifacts/git-commit.txt
+
+      - name: Upload deployment artifacts
+        if: ${{ !inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-info-${{ inputs.environment }}-${{ inputs.version }}
+          path: deployment-artifacts/
+          retention-days: 90
