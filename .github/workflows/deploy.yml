@@ -168,6 +168,7 @@ jobs:
           server: ${{ secrets.DREAMHOST_FTP_SERVER }}
           username: ${{ secrets.DREAMHOST_FTP_USERNAME }}
           password: ${{ secrets.DREAMHOST_FTP_PASSWORD }}
+          protocol: sftp
           local-dir: ./dist/bnch-benchmarker-app/browser/
           server-dir: ${{ inputs.environment == 'production' && './bnch.dev/' || './staging.bnch.dev/' }}
           dry-run: ${{ inputs.dry_run }}
