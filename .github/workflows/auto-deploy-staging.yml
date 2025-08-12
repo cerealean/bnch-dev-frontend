@@ -1,0 +1,150 @@
+name: Auto Deploy to Staging
+
+on:
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  check-deployment-conditions:
+    name: Check Deployment Conditions
+    runs-on: ubuntu-latest
+    outputs:
+      should-deploy: ${{ steps.check.outputs.should-deploy }}
+      latest-version: ${{ steps.check.outputs.latest-version }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Check if deployment should proceed
+        id: check
+        run: |
+          echo "🔍 Checking deployment conditions..."
+          
+          # Check if CI/CD workflow succeeded
+          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
+            echo "❌ CI/CD workflow did not succeed (status: ${{ github.event.workflow_run.conclusion }})"
+            echo "should-deploy=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Check if this was triggered by a push to main
+          if [ "${{ github.event.workflow_run.head_branch }}" != "main" ]; then
+            echo "ℹ️ Workflow was not triggered by main branch (branch: ${{ github.event.workflow_run.head_branch }})"
+            echo "should-deploy=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Fetch all tags to get the latest version
+          git fetch --tags --force
+          
+          # Get the latest semantic version tag
+          LATEST_TAG=$(git tag --sort=-version:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+          
+          if [ -z "$LATEST_TAG" ]; then
+            echo "⚠️ No valid semantic version tags found - checking if semantic-release created one"
+            # Wait a bit for semantic-release to complete and create tags
+            sleep 10
+            git fetch --tags --force
+            LATEST_TAG=$(git tag --sort=-version:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+            
+            if [ -z "$LATEST_TAG" ]; then
+              echo "❌ Still no valid semantic version tags found"
+              echo "Available tags:"
+              git tag --sort=-version:refname | head -10
+              echo "should-deploy=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+          
+          echo "✅ All conditions met for deployment"
+          echo "✅ Latest version found: $LATEST_TAG"
+          echo "should-deploy=true" >> $GITHUB_OUTPUT
+          echo "latest-version=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+  deploy-to-staging:
+    name: Deploy to Staging
+    needs: check-deployment-conditions
+    if: ${{ needs.check-deployment-conditions.outputs.should-deploy == 'true' }}
+    uses: ./.github/workflows/deploy.yml
+    with:
+      version: ${{ needs.check-deployment-conditions.outputs.latest-version }}
+      environment: staging
+      dry_run: false
+    secrets: inherit
+
+  notify-deployment-success:
+    name: Notify Deployment Success
+    runs-on: ubuntu-latest
+    needs: [check-deployment-conditions, deploy-to-staging]
+    if: ${{ needs.check-deployment-conditions.outputs.should-deploy == 'true' && success() }}
+    
+    steps:
+      - name: Deployment success notification
+        run: |
+          echo "## 🚀 Auto-Deployment to Staging Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **CI/CD Pipeline completed successfully!**" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Staging deployment completed successfully!**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Details:**" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** ${{ needs.check-deployment-conditions.outputs.latest-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** staging" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by:** CI/CD Pipeline success" >> $GITHUB_STEP_SUMMARY
+          echo "- **Source workflow:** ${{ github.event.workflow_run.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Source run:** [${{ github.event.workflow_run.id }}](${{ github.event.workflow_run.html_url }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔧 **Staging URL:** [https://staging.bnch.dev](https://staging.bnch.dev)" >> $GITHUB_STEP_SUMMARY
+
+  notify-skipped-deployment:
+    name: Notify Skipped Deployment
+    runs-on: ubuntu-latest
+    needs: check-deployment-conditions
+    if: ${{ needs.check-deployment-conditions.outputs.should-deploy == 'false' }}
+    
+    steps:
+      - name: Skipped deployment notification
+        run: |
+          echo "## ℹ️ Staging Deployment Skipped" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment to staging was skipped for one of the following reasons:**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
+            echo "❌ **CI/CD workflow did not succeed** (status: ${{ github.event.workflow_run.conclusion }})" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ github.event.workflow_run.head_branch }}" != "main" ]; then
+            echo "ℹ️ **Workflow was not triggered by main branch** (branch: ${{ github.event.workflow_run.head_branch }})" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **No valid semantic version tags found** - this may indicate semantic-release didn't create a new version" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Source workflow:** [${{ github.event.workflow_run.name }}](${{ github.event.workflow_run.html_url }})" >> $GITHUB_STEP_SUMMARY
+
+  notify-deployment-failure:
+    name: Notify Deployment Failure
+    runs-on: ubuntu-latest
+    needs: [check-deployment-conditions, deploy-to-staging]
+    if: ${{ needs.check-deployment-conditions.outputs.should-deploy == 'true' && failure() }}
+    
+    steps:
+      - name: Deployment failure notification
+        run: |
+          echo "## ❌ Staging Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**The staging deployment failed after CI/CD pipeline succeeded.**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Details:**" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** ${{ needs.check-deployment-conditions.outputs.latest-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** staging" >> $GITHUB_STEP_SUMMARY
+          echo "- **Source workflow:** ${{ github.event.workflow_run.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Source run:** [${{ github.event.workflow_run.id }}](${{ github.event.workflow_run.html_url }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔍 **Next steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Check the deployment workflow logs for specific errors" >> $GITHUB_STEP_SUMMARY
+          echo "2. Verify staging environment configuration" >> $GITHUB_STEP_SUMMARY
+          echo "3. Try manual deployment with: \`gh workflow run deploy.yml --field version=\"${{ needs.check-deployment-conditions.outputs.latest-version }}\" --field environment=\"staging\"\`" >> $GITHUB_STEP_SUMMARY

@@ -105,8 +105,61 @@ src/
 
 - `npm start` - Start development server
 - `npm run build` - Build for production
+- `npm run build:prod` - Build for production with optimizations
 - `npm run watch` - Build in watch mode
 - `npm test` - Run unit tests
+- `npm run test:ci` - Run tests in CI mode (headless, single run)
+- `npm run lint` - Run ESLint
+- `npm run ci:check` - Run both linting and tests (used in CI)
+
+## Deployment
+
+This project uses automated CI/CD workflows for deployment:
+
+### Automated Staging Deployment
+
+- **Trigger**: Every push to `main` branch (after CI/CD pipeline succeeds)
+- **Environment**: [https://staging.bnch.dev](https://staging.bnch.dev)
+- **Process**: Automatically triggered when all tests pass and build succeeds
+
+### Manual Staging Deployment
+
+You can manually deploy to staging using the PowerShell script:
+
+```powershell
+# Deploy latest version
+.\deploy-staging.ps1
+
+# Deploy specific version
+.\deploy-staging.ps1 -Version 1.2.3
+
+# Dry run (test without deploying)
+.\deploy-staging.ps1 -DryRun
+```
+
+### Production Deployment
+
+Production deployments are triggered manually through GitHub Actions:
+
+1. Go to **Actions** tab in GitHub
+2. Select **Deploy to Dreamhost** workflow
+3. Click **Run workflow**
+4. Choose `production` environment and version
+
+### CI/CD Pipeline
+
+The project includes several GitHub Actions workflows:
+
+- **`ci-cd.yml`**: Main pipeline (tests, build, semantic release)
+- **`auto-deploy-staging.yml`**: Automatic staging deployment after CI/CD success
+- **`deploy.yml`**: Manual deployment workflow (supports staging and production)
+- **`pr-tests.yml`**: Quick tests for pull requests
+- **`rollback.yml`**: Rollback deployments if needed
+
+### Environment URLs
+
+- **Staging**: [https://staging.bnch.dev](https://staging.bnch.dev)
+- **Production**: [https://bnch.dev](https://bnch.dev)
 
 ## Technologies Used
 
