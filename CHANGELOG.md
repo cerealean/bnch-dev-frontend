@@ -1,3 +1,16 @@
+# [1.3.0](https://github.com/cerealean/bnch-dev-frontend/compare/v1.2.2...v1.3.0) (2025-08-12)
+
+
+### Features
+
+* add comparison ([38e1989](https://github.com/cerealean/bnch-dev-frontend/commit/38e19896b682eb70de39f51f269d8dc247be3fe4))
+
+
+### Performance Improvements
+
+* ci/cd now builds with prod config ([2323874](https://github.com/cerealean/bnch-dev-frontend/commit/2323874f3e8ce3acf1e95c2906d1b0d3a244c0d4))
+* increase build size budgets ([90a5bb3](https://github.com/cerealean/bnch-dev-frontend/commit/90a5bb3b0c9509cf7738b5bdd5dcb8361e43ad11))
+
 ## [1.2.2](https://github.com/cerealean/bnch-dev-frontend/compare/v1.2.1...v1.2.2) (2025-08-11)
 
 
