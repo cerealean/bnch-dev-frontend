@@ -3,34 +3,108 @@
     <h1>JavaScript Performance Benchmarker</h1>
     <p class="description">
       This tool allows you to benchmark JavaScript code performance with statistical precision. 
-      Simply enter your JavaScript code in the textarea below and click "Run Benchmark" to get 
-      detailed performance metrics including execution time, operations per second, and statistical analysis.
+      You can either benchmark a single script or compare two scripts side-by-side.
       The code will be executed safely in an isolated environment to ensure accurate measurements.
     </p>
   </header>
 
   <main class="main-content" [attr.data-app-version]="appVersion">
-    <div class="input-section">
-      <textarea 
-        [(ngModel)]="code" 
-        placeholder="Enter your JavaScript code here to benchmark its performance..."
-        class="code-input"
-         id="main-benchmark-input" 
-         name="main-benchmark-input"
+    <!-- Mode Selection -->
+    <div class="mode-section">
+      <mat-button-toggle-group 
+        [value]="mode()" 
+        (change)="mode.set($event.value)"
         [disabled]="isRunning()"
-        rows="20"
-      ></textarea>
+        class="mode-toggle">
+        <mat-button-toggle value="single">
+          <mat-icon>speed</mat-icon>
+          Single Benchmark
+        </mat-button-toggle>
+        <mat-button-toggle value="compare">
+          <mat-icon>compare_arrows</mat-icon>
+          Compare Scripts
+        </mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
+
+    <!-- Input Section -->
+    <div class="input-section" [class.comparison-mode]="mode() === 'compare'">
+      @if (mode() === 'single') {
+        <div class="single-input">
+          <textarea 
+            [(ngModel)]="code" 
+            placeholder="Enter your JavaScript code here to benchmark its performance..."
+            class="code-input"
+            id="main-benchmark-input" 
+            name="main-benchmark-input"
+            [disabled]="isRunning()"
+            rows="20"
+          ></textarea>
+        </div>
+      } @else {
+        <div class="comparison-inputs">
+          <mat-card class="input-card baseline-card">
+            <mat-card-header>
+              <mat-card-title>
+                <mat-icon>code</mat-icon>
+                Baseline Code
+              </mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <textarea 
+                [(ngModel)]="code" 
+                placeholder="Enter your baseline JavaScript code here..."
+                class="code-input baseline-input"
+                id="baseline-benchmark-input" 
+                name="baseline-benchmark-input"
+                [disabled]="isRunning()"
+                rows="16"
+              ></textarea>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="input-card comparison-card">
+            <mat-card-header>
+              <mat-card-title>
+                <mat-icon>code</mat-icon>
+                Comparison Code
+              </mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <textarea 
+                [(ngModel)]="comparisonCode" 
+                placeholder="Enter your comparison JavaScript code here..."
+                class="code-input comparison-input"
+                id="comparison-benchmark-input" 
+                name="comparison-benchmark-input"
+                [disabled]="isRunning()"
+                rows="16"
+              ></textarea>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      }
       
       <button 
         (click)="runBenchmark()" 
-        [disabled]="isRunning() || !code().trim()"
+        [disabled]="isRunning() || !code().trim() || (mode() === 'compare' && !comparisonCode().trim())"
         class="submit-button"
       >
         @if (isRunning()) {
           <span class="spinner"></span>
-          Running Benchmark...
+          @if (mode() === 'compare') {
+            Running Comparison...
+          } @else {
+            Running Benchmark...
+          }
         } @else {
-          Run Benchmark
+          @if (mode() === 'compare') {
+            <mat-icon>compare_arrows</mat-icon>
+            Run Comparison
+          } @else {
+            <mat-icon>speed</mat-icon>
+            Run Benchmark
+          }
         }
       </button>
     </div>
@@ -42,7 +116,8 @@
       </div>
     }
 
-    @if (result()) {
+    <!-- Single Benchmark Results -->
+    @if (result() && mode() === 'single') {
       <div class="results-section">
         <h2>Benchmark Results</h2>
         
@@ -163,6 +238,174 @@
                         [options]="statsComparisonOptions"
                         width="350"
                         height="350">
+                      </canvas>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          </mat-tab>
+        </mat-tab-group>
+      </div>
+    }
+
+    <!-- Comparison Results -->
+    @if (comparisonResult() && mode() === 'compare') {
+      <div class="results-section comparison-results">
+        <h2>Comparison Results</h2>
+        
+        <!-- Summary Card -->
+        <mat-card class="comparison-summary">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>insights</mat-icon>
+              Performance Comparison Summary
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="summary-content">
+              <div class="summary-text">
+                <h4>{{ comparisonResult()!.summary }}</h4>
+                <p class="relative-diff">
+                  @if (comparisonResult()!.relativeDifference > 0) {
+                    <mat-icon class="positive">trending_up</mat-icon>
+                    Comparison code is <strong>{{ formatNumber(Math.abs(comparisonResult()!.relativeDifference) * 100, 1) }}% faster</strong>
+                  } @else if (comparisonResult()!.relativeDifference < 0) {
+                    <mat-icon class="negative">trending_down</mat-icon>
+                    Comparison code is <strong>{{ formatNumber(Math.abs(comparisonResult()!.relativeDifference) * 100, 1) }}% slower</strong>
+                  } @else {
+                    <mat-icon>trending_flat</mat-icon>
+                    Performance is <strong>equivalent</strong>
+                  }
+                </p>
+                <p class="significance">
+                  Statistical significance: {{ formatNumber(comparisonResult()!.significanceLevel * 100, 1) }}%
+                </p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-tab-group class="results-tabs" animationDuration="300ms">
+          <!-- Side-by-Side Overview -->
+          <mat-tab label="Side-by-Side Overview">
+            <div class="tab-content">
+              <div class="comparison-overview">
+                <div class="comparison-stats-grid">
+                  <mat-card class="stat-card baseline-stats">
+                    <mat-card-header>
+                      <mat-card-title>Baseline Code</mat-card-title>
+                    </mat-card-header>
+                    <mat-card-content>
+                      <div class="stat-item">
+                        <span class="stat-label">Mean:</span>
+                        <span class="stat-value">
+                          <app-time-format [duration]="comparisonResult()!.baseline.stats.mean"></app-time-format>
+                        </span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">Ops/sec:</span>
+                        <span class="stat-value">{{ formatNumber(comparisonResult()!.baseline.stats.operationsPerSecond, 0) }}</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">Median:</span>
+                        <span class="stat-value">
+                          <app-time-format [duration]="comparisonResult()!.baseline.stats.median"></app-time-format>
+                        </span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">Std Dev:</span>
+                        <span class="stat-value">
+                          <app-time-format [duration]="comparisonResult()!.baseline.stats.standardDeviation"></app-time-format>
+                        </span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">Samples:</span>
+                        <span class="stat-value">{{ comparisonResult()!.baseline.stats.successfulSamples }} / {{ comparisonResult()!.baseline.samples.length }}</span>
+                      </div>
+                    </mat-card-content>
+                  </mat-card>
+
+                  <mat-card class="stat-card comparison-stats">
+                    <mat-card-header>
+                      <mat-card-title>Comparison Code</mat-card-title>
+                    </mat-card-header>
+                    <mat-card-content>
+                      <div class="stat-item">
+                        <span class="stat-label">Mean:</span>
+                        <span class="stat-value">
+                          <app-time-format [duration]="comparisonResult()!.comparison.stats.mean"></app-time-format>
+                        </span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">Ops/sec:</span>
+                        <span class="stat-value">{{ formatNumber(comparisonResult()!.comparison.stats.operationsPerSecond, 0) }}</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">Median:</span>
+                        <span class="stat-value">
+                          <app-time-format [duration]="comparisonResult()!.comparison.stats.median"></app-time-format>
+                        </span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">Std Dev:</span>
+                        <span class="stat-value">
+                          <app-time-format [duration]="comparisonResult()!.comparison.stats.standardDeviation"></app-time-format>
+                        </span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">Samples:</span>
+                        <span class="stat-value">{{ comparisonResult()!.comparison.stats.successfulSamples }} / {{ comparisonResult()!.comparison.samples.length }}</span>
+                      </div>
+                    </mat-card-content>
+                  </mat-card>
+                </div>
+              </div>
+            </div>
+          </mat-tab>
+
+          <!-- Comparison Visualizations -->
+          <mat-tab label="Comparison Charts">
+            <div class="tab-content">
+              <div class="charts-section">
+                <h3>Performance Comparison Charts</h3>
+                
+                <div class="charts-grid comparison-charts">
+                  @if (comparisonOverviewData()) {
+                    <div class="chart-container chart-large">
+                      <canvas 
+                        baseChart
+                        type="bar"
+                        [data]="comparisonOverviewData()!"
+                        [options]="comparisonOverviewOptions"
+                        width="600"
+                        height="400">
+                      </canvas>
+                    </div>
+                  }
+                  
+                  @if (comparisonTimeSeriesData()) {
+                    <div class="chart-container chart-large">
+                      <canvas 
+                        baseChart
+                        type="line"
+                        [data]="comparisonTimeSeriesData()!"
+                        [options]="comparisonTimeSeriesOptions"
+                        width="600"
+                        height="400">
+                      </canvas>
+                    </div>
+                  }
+                  
+                  @if (comparisonDistributionData()) {
+                    <div class="chart-container chart-large">
+                      <canvas 
+                        baseChart
+                        type="bar"
+                        [data]="comparisonDistributionData()!"
+                        [options]="comparisonDistributionOptions"
+                        width="600"
+                        height="400">
                       </canvas>
                     </div>
                   }

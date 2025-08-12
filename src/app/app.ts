@@ -2,9 +2,13 @@ import { Component, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatCardModule } from '@angular/material/card';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatIconModule } from '@angular/material/icon';
 import { BaseChartDirective } from 'ng2-charts';
 import { Chart, ChartConfiguration, ChartData, registerables } from 'chart.js';
-import { benchmark, BenchmarkResult } from './benchmarker-wrapper';
+import { benchmark, compare, BenchmarkResult, BenchmarkComparison } from './benchmarker-wrapper';
 import { TimeFormatComponent } from './time-format/time-format.component';
 import { TimeDuration } from '@bnch/benchmarker'
 import { version as appVersion } from '../../package.json';
@@ -19,6 +23,10 @@ Chart.register(...registerables);
     FormsModule,
     BaseChartDirective,
     MatTabsModule,
+    MatButtonToggleModule,
+    MatCardModule,
+    MatDividerModule,
+    MatIconModule,
     TimeFormatComponent
   ],
   templateUrl: './app.html',
@@ -26,17 +34,30 @@ Chart.register(...registerables);
 })
 export class App {
   protected readonly appVersion = appVersion;
+  protected readonly Math = Math;
+
+  // Mode management
+  protected readonly mode = signal<'single' | 'compare'>('single');
 
   protected readonly code = signal(`// Enter your JavaScript code here to benchmark
-// Example:
+// Example - simple multiplication:
 let sum = 0;
 for (let i = 0; i < 10000; i++) {
-  sum += i;
+  sum += i * 1;
+}
+return sum;`);
+
+  protected readonly comparisonCode = signal(`// Enter your comparison JavaScript code here
+// Example - using Math.pow instead of simple multiplication:
+let sum = 0;
+for (let i = 0; i < 10000; i++) {
+  sum += Math.pow(i, 1);
 }
 return sum;`);
   
   protected readonly isRunning = signal<boolean>(false);
   protected readonly result = signal<BenchmarkResult | null>(null);
+  protected readonly comparisonResult = signal<BenchmarkComparison | null>(null);
   protected readonly resultStats = computed(() => this.result()?.stats);
   protected readonly error = signal<string | null>(null);
 
@@ -44,6 +65,11 @@ return sum;`);
   protected readonly histogramData = signal<ChartData<'bar'> | null>(null);
   protected readonly timeSeriesData = signal<ChartData<'line'> | null>(null);
   protected readonly statsComparisonData = signal<ChartData<'doughnut'> | null>(null);
+  
+  // Comparison chart data
+  protected readonly comparisonOverviewData = signal<ChartData<'bar'> | null>(null);
+  protected readonly comparisonDistributionData = signal<ChartData<'bar'> | null>(null);
+  protected readonly comparisonTimeSeriesData = signal<ChartData<'line'> | null>(null);
 
   protected readonly histogramOptions: ChartConfiguration<'bar'>['options'] = {
     responsive: true,
@@ -118,31 +144,161 @@ return sum;`);
     }
   };
 
+  protected readonly comparisonOverviewOptions: ChartConfiguration<'bar'>['options'] = {
+    responsive: true,
+    plugins: {
+      title: {
+        display: true,
+        text: 'Performance Comparison Overview'
+      },
+      legend: {
+        display: true,
+        position: 'top'
+      }
+    },
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: 'Metrics'
+        }
+      },
+      y: {
+        title: {
+          display: true,
+          text: 'Execution Time (ms)'
+        }
+      }
+    }
+  };
+
+  protected readonly comparisonDistributionOptions: ChartConfiguration<'bar'>['options'] = {
+    responsive: true,
+    plugins: {
+      title: {
+        display: true,
+        text: 'Execution Time Distribution Comparison'
+      },
+      legend: {
+        display: true,
+        position: 'top'
+      }
+    },
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: 'Execution Time Range (ms)'
+        }
+      },
+      y: {
+        title: {
+          display: true,
+          text: 'Frequency'
+        }
+      }
+    }
+  };
+
+  protected readonly comparisonTimeSeriesOptions: ChartConfiguration<'line'>['options'] = {
+    responsive: true,
+    plugins: {
+      title: {
+        display: true,
+        text: 'Execution Time Over Samples - Side by Side'
+      },
+      legend: {
+        display: true,
+        position: 'top'
+      }
+    },
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: 'Sample Number'
+        }
+      },
+      y: {
+        title: {
+          display: true,
+          text: 'Execution Time (ms)'
+        }
+      }
+    }
+  };
+
   protected async runBenchmark(): Promise<void> {
+    const currentMode = this.mode();
     const codeValue = this.code();
     
     if (!codeValue.trim()) {
       return;
     }
 
+    if (currentMode === 'compare') {
+      const comparisonCodeValue = this.comparisonCode();
+      if (!comparisonCodeValue.trim()) {
+        this.error.set('Both baseline and comparison code must be provided for comparison mode.');
+        return;
+      }
+      await this.runComparison(codeValue, comparisonCodeValue);
+    } else {
+      await this.runSingleBenchmark(codeValue);
+    }
+  }
+
+  private async runSingleBenchmark(codeValue: string): Promise<void> {
     this.isRunning.set(true);
     this.error.set(null);
     this.result.set(null);
+    this.comparisonResult.set(null);
 
     try {
       // Use worker for isolated execution and more reliable results
       const benchmarkResult = await benchmark(codeValue, {
-        minSamples: 10,
-        maxSamples: 100,
-        maxTime: TimeDuration.fromSeconds(10),
-        warmupIterations: 5,
+        minSamples: 5, // Reduced for faster testing
+        maxSamples: 20, // Reduced for faster testing
+        maxTime: TimeDuration.fromSeconds(5), // Reduced for faster testing
+        warmupIterations: 2, // Reduced for faster testing
         yieldBetweenSamples: true,
-        useWorker: true // Re-enabled worker with our wrapper fix!
+        useWorker: false // Disable worker for faster testing
       });
 
       this.result.set(benchmarkResult);
       this.generateChartData(benchmarkResult);
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      this.error.set(errorMessage);
+    } finally {
+      this.isRunning.set(false);
+    }
+  }
+
+  private async runComparison(baselineCode: string, comparisonCode: string): Promise<void> {
+    this.isRunning.set(true);
+    this.error.set(null);
+    this.result.set(null);
+    this.comparisonResult.set(null);
+
+    try {
+      console.log('Starting comparison benchmark...');
+      
+      // Use worker for isolated execution and more reliable results
+      const comparisonResult = await compare(baselineCode, comparisonCode, {
+        minSamples: 5, // Reduced for faster testing
+        maxSamples: 20, // Reduced for faster testing
+        maxTime: TimeDuration.fromSeconds(5), // Reduced for faster testing
+        warmupIterations: 2, // Reduced for faster testing
+        yieldBetweenSamples: true,
+        useWorker: false // Try without worker first to debug
+      });
+
+      console.log('Comparison completed successfully');
+      this.comparisonResult.set(comparisonResult);
+      this.generateComparisonChartData(comparisonResult);
+    } catch (err) {
+      console.error('Comparison error:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       this.error.set(errorMessage);
     } finally {
@@ -317,6 +473,136 @@ return sum;`);
         backgroundColor: colors,
         borderColor: borderColors,
         borderWidth: 2
+      }]
+    });
+  }
+  
+  private generateComparisonChartData(comparisonResult: BenchmarkComparison): void {
+    this.generateComparisonOverviewData(comparisonResult);
+    this.generateComparisonDistributionData(comparisonResult);
+    this.generateComparisonTimeSeriesData(comparisonResult);
+  }
+
+  private generateComparisonOverviewData(comparisonResult: BenchmarkComparison): void {
+    const baselineStats = comparisonResult.baseline.stats;
+    const comparisonStats = comparisonResult.comparison.stats;
+
+    const metrics = ['Mean', 'Median', 'Min', 'Max', 'Std Dev'];
+    const baselineData = [
+      baselineStats.mean.milliseconds,
+      baselineStats.median.milliseconds,
+      baselineStats.min.milliseconds,
+      baselineStats.max.milliseconds,
+      baselineStats.standardDeviation.milliseconds
+    ];
+    const comparisonData = [
+      comparisonStats.mean.milliseconds,
+      comparisonStats.median.milliseconds,
+      comparisonStats.min.milliseconds,
+      comparisonStats.max.milliseconds,
+      comparisonStats.standardDeviation.milliseconds
+    ];
+
+    this.comparisonOverviewData.set({
+      labels: metrics,
+      datasets: [{
+        label: 'Baseline Code',
+        data: baselineData,
+        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+      }, {
+        label: 'Comparison Code',
+        data: comparisonData,
+        backgroundColor: 'rgba(255, 99, 132, 0.7)',
+        borderColor: 'rgba(255, 99, 132, 1)',
+        borderWidth: 1
+      }]
+    });
+  }
+
+  private generateComparisonDistributionData(comparisonResult: BenchmarkComparison): void {
+    const baselineExecutionTimes = comparisonResult.baseline.samples
+      .filter(sample => sample.success)
+      .map(sample => sample.time);
+    
+    const comparisonExecutionTimes = comparisonResult.comparison.samples
+      .filter(sample => sample.success)
+      .map(sample => sample.time);
+
+    // Create histogram bins for both datasets
+    const allTimes = [...baselineExecutionTimes, ...comparisonExecutionTimes];
+    const min = Math.min(...allTimes);
+    const max = Math.max(...allTimes);
+    const binCount = Math.min(15, Math.max(5, Math.ceil(Math.sqrt(allTimes.length))));
+    const binSize = (max - min) / binCount;
+
+    const baselineBins = Array(binCount).fill(0);
+    const comparisonBins = Array(binCount).fill(0);
+    const binLabels = [];
+
+    for (let i = 0; i < binCount; i++) {
+      const binStart = min + i * binSize;
+      const binEnd = min + (i + 1) * binSize;
+      binLabels.push(`${this.formatNumber(binStart, 2)}-${this.formatNumber(binEnd, 2)}`);
+    }
+
+    baselineExecutionTimes.forEach(time => {
+      const binIndex = Math.min(Math.floor((time - min) / binSize), binCount - 1);
+      baselineBins[binIndex]++;
+    });
+
+    comparisonExecutionTimes.forEach(time => {
+      const binIndex = Math.min(Math.floor((time - min) / binSize), binCount - 1);
+      comparisonBins[binIndex]++;
+    });
+
+    this.comparisonDistributionData.set({
+      labels: binLabels,
+      datasets: [{
+        label: 'Baseline Code',
+        data: baselineBins,
+        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+      }, {
+        label: 'Comparison Code',
+        data: comparisonBins,
+        backgroundColor: 'rgba(255, 99, 132, 0.7)',
+        borderColor: 'rgba(255, 99, 132, 1)',
+        borderWidth: 1
+      }]
+    });
+  }
+
+  private generateComparisonTimeSeriesData(comparisonResult: BenchmarkComparison): void {
+    const baselineExecutionTimes = comparisonResult.baseline.samples
+      .filter(sample => sample.success)
+      .map(sample => sample.time);
+      
+    const comparisonExecutionTimes = comparisonResult.comparison.samples
+      .filter(sample => sample.success)
+      .map(sample => sample.time);
+
+    const maxSamples = Math.max(baselineExecutionTimes.length, comparisonExecutionTimes.length);
+    const sampleNumbers = Array.from({ length: maxSamples }, (_, i) => i + 1);
+
+    this.comparisonTimeSeriesData.set({
+      labels: sampleNumbers.map(n => n.toString()),
+      datasets: [{
+        label: 'Baseline Code',
+        data: baselineExecutionTimes,
+        borderColor: 'rgba(54, 162, 235, 1)',
+        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+        fill: false,
+        tension: 0.1
+      }, {
+        label: 'Comparison Code',
+        data: comparisonExecutionTimes,
+        borderColor: 'rgba(255, 99, 132, 1)',
+        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+        fill: false,
+        tension: 0.1
       }]
     });
   }

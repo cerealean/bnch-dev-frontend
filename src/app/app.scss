@@ -325,3 +325,229 @@
     padding: 1rem 0;
   }
 }
+
+// Comparison Mode Styles
+.mode-section {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+
+  .mode-toggle {
+    --mdc-filled-button-container-color: #f7fafc;
+    --mdc-filled-button-label-text-color: #4a5568;
+    --mdc-filled-button-selected-container-color: #007acc;
+    --mdc-filled-button-selected-label-text-color: #ffffff;
+    
+    mat-button-toggle {
+      margin: 0 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 500;
+      
+      mat-icon {
+        margin-right: 0.5rem;
+      }
+    }
+  }
+}
+
+.input-section.comparison-mode {
+  .comparison-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+
+    .input-card {
+      border: 2px solid #e2e8f0;
+      transition: border-color 0.3s ease;
+
+      &.baseline-card {
+        border-left: 4px solid #3182ce;
+      }
+
+      &.comparison-card {
+        border-left: 4px solid #e53e3e;
+      }
+
+      .mat-mdc-card-header {
+        .mat-mdc-card-title {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 1.1rem;
+          font-weight: 500;
+          color: #2d3748;
+          
+          mat-icon {
+            font-size: 1.2rem;
+            width: 1.2rem;
+            height: 1.2rem;
+          }
+        }
+      }
+
+      .code-input {
+        min-height: 300px;
+        border: 1px solid #e2e8f0;
+        margin: 0;
+      }
+    }
+  }
+}
+
+.submit-button {
+  mat-icon {
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+}
+
+// Comparison Results Styles
+.comparison-results {
+  .comparison-summary {
+    margin-bottom: 2rem;
+    border-left: 4px solid #38a169;
+
+    .mat-mdc-card-header .mat-mdc-card-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #2d3748;
+      
+      mat-icon {
+        color: #38a169;
+      }
+    }
+
+    .summary-content {
+      h4 {
+        font-size: 1.2rem;
+        color: #2d3748;
+        margin-bottom: 1rem;
+        font-weight: 500;
+      }
+
+      .relative-diff {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+
+        mat-icon {
+          &.positive {
+            color: #38a169;
+          }
+          &.negative {
+            color: #e53e3e;
+          }
+        }
+      }
+
+      .significance {
+        color: #718096;
+        font-size: 0.9rem;
+      }
+    }
+  }
+
+  .comparison-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+
+    .stat-card {
+      border: 2px solid #e2e8f0;
+
+      &.baseline-stats {
+        border-left: 4px solid #3182ce;
+      }
+
+      &.comparison-stats {
+        border-left: 4px solid #e53e3e;
+      }
+
+      .mat-mdc-card-header .mat-mdc-card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2d3748;
+      }
+
+      .stat-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f7fafc;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        .stat-label {
+          font-weight: 500;
+          color: #4a5568;
+        }
+
+        .stat-value {
+          font-family: 'Courier New', Consolas, 'Monaco', monospace;
+          font-weight: 600;
+          color: #2d3748;
+        }
+      }
+    }
+  }
+}
+
+.charts-grid.comparison-charts {
+  grid-template-columns: 1fr;
+  
+  .chart-container.chart-large {
+    min-height: 450px;
+    
+    canvas {
+      max-height: 400px !important;
+    }
+  }
+}
+
+// Responsive design for comparison mode
+@media (max-width: 768px) {
+  .input-section.comparison-mode {
+    .comparison-inputs {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+  }
+
+  .comparison-results {
+    .comparison-stats-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .comparison-summary {
+      .summary-content {
+        .relative-diff {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.25rem;
+        }
+      }
+    }
+  }
+
+  .mode-section {
+    .mode-toggle {
+      mat-button-toggle {
+        margin: 0 0.25rem;
+        padding: 0.5rem;
+        font-size: 0.9rem;
+      }
+    }
+  }
+}
