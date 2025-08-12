@@ -94,6 +94,15 @@
             ],
             "styles": [
               "src/styles.scss"
+            ],
+            "codeCoverage": true,
+            "codeCoverageExclude": [
+              "src/main.ts",
+              "src/polyfills.ts",
+              "**/*.spec.ts",
+              "**/*.interface.ts",
+              "**/*.enum.ts",
+              "**/*.model.ts"
             ]
           }
         },
