@@ -117,13 +117,8 @@ jobs:
       - name: Build Angular application for ${{ inputs.environment }}
         run: |
           echo "Building for environment: ${{ inputs.environment }}"
-          if [ "${{ inputs.environment }}" = "production" ]; then
-            echo "🏗️ Building production version..."
-            npm run build:prod
-          else
-            echo "🏗️ Building development version..."
-            npm run build
-          fi
+          echo "🏗️ Building production version..."
+          npm run build:prod
           
           # Verify build output exists
           if [ ! -d "./dist/bnch-benchmarker-app/browser" ]; then

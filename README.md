@@ -104,9 +104,9 @@ src/
 ## Available Scripts
 
 - `npm start` - Start development server
-- `npm run build` - Build for production
-- `npm run build:prod` - Build for production with optimizations
-- `npm run watch` - Build in watch mode
+- `npm run build` - Build for production (optimized)
+- `npm run build:prod` - Build for production (explicit)
+- `npm run watch` - Build in watch mode (development)
 - `npm test` - Run unit tests
 - `npm run test:ci` - Run tests in CI mode (headless, single run)
 - `npm run lint` - Run ESLint
